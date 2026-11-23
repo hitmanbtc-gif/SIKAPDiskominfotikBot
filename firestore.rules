@@ -320,8 +320,7 @@ service cloud.firestore {
 
       allow delete: if isSignedIn() &&
         isValidId(reportId) &&
-        existing().userId == request.auth.uid &&
-        existing().status in ['DRAFT', 'REVISION'];
+        (existing().userId == request.auth.uid || isBootstrappedAdmin());
     }
   }
 }

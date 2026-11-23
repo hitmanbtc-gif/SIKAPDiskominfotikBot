@@ -53,7 +53,8 @@ fun ReportListScreen(
     onSearchChange: (String) -> Unit,
     onOpenReport: (String) -> Unit,
     onCreateReport: () -> Unit,
-    onExportPdf: (List<ActivityReport>) -> Unit
+    onExportPdf: (List<ActivityReport>) -> Unit,
+    onDeleteReport: (ActivityReport) -> Unit
 ) {
     val allReports = (reportsState as? UiState.Success)?.data.orEmpty()
     val filteredReports = remember(allReports, selectedClassification, selectedStatus, searchQuery) {
@@ -216,7 +217,8 @@ fun ReportListScreen(
                             items(filteredReports, key = { it.id }) { report ->
                                 ActivityReportCard(
                                     report = report,
-                                    onClick = { onOpenReport(report.id) }
+                                    onClick = { onOpenReport(report.id) },
+                                    onDelete = { onDeleteReport(report) }
                                 )
                             }
                         }

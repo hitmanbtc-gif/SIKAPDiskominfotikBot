@@ -433,6 +433,9 @@ private fun AuthenticatedLapkinApp(
                             onOpenVerificationQueue = { navigateTopLevel(ROUTE_VERIFICATION) },
                             onExportPdf = { list ->
                                 exportReportsToPdf(list, "Rekap Aktivitas Harian ASN")
+                            },
+                            onDeleteReport = { rep ->
+                                viewModel.deleteDraft(rep.id)
                             }
                         )
                     }
@@ -450,6 +453,9 @@ private fun AuthenticatedLapkinApp(
                             onCreateReport = { navigateTopLevel(ROUTE_BOT_TG) },
                             onExportPdf = { list ->
                                 exportReportsToPdf(list, "Rekap Laporan Terfilter")
+                            },
+                            onDeleteReport = { rep ->
+                                viewModel.deleteDraft(rep.id)
                             }
                         )
                     }

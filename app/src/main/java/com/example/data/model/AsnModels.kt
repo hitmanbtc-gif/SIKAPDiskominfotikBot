@@ -14,27 +14,39 @@ enum class JabatanLevel(
     PELAKSANA(
         label = "PPPK / Pelaksana",
         shortLabel = "Pelaksana",
-        description = "Jenjang pelaporan hanya sampai ke Pejabat Pengawas / Fungsional untuk disahkan langsung",
+        description = "Jenjang pengajuan laporan dari Pelaksana/PPPK diajukan ke Pejabat Pengawas / Fungsional untuk disahkan",
         stepIndex = 0
     ),
     PENGAWAS_FUNGSIONAL(
         label = "Pejabat Pengawas / Fungsional",
         shortLabel = "Pengawas/JF",
-        description = "Mengesahkan laporan PPPK/Pelaksana, memilih laporan untuk diteruskan ke Administrator, & jenjang pelaporan sampai ke Pejabat Administrator",
+        description = "Mengesahkan laporan Pelaksana/PPPK & mengajukan laporan sendiri ke Pejabat Administrator untuk disahkan",
         stepIndex = 1
     ),
     ADMINISTRATOR(
         label = "Pejabat Administrator",
         shortLabel = "Administrator",
-        description = "Mengesahkan laporan Pengawas/Fungsional, memilih laporan untuk diteruskan ke Kepala Dinas, & jenjang pelaporan ke Kepala Dinas",
+        description = "Mengesahkan laporan Pengawas/Fungsional & mengajukan laporan sendiri kepada Kepala Dinas untuk disahkan",
         stepIndex = 2
     ),
     KEPALA_DINAS(
         label = "Kepala Dinas",
         shortLabel = "Kepala Dinas",
-        description = "Mengesahkan laporan Pejabat Administrator serta laporan pilihan yang diteruskan kepada Kepala Dinas",
+        description = "Mengesahkan laporan dari Pejabat Administrator serta laporan pilihan yang diteruskan kepada Kepala Dinas",
         stepIndex = 3
     );
+
+    fun targetApproverLabel(): String = when (this) {
+        PELAKSANA -> "Pejabat Pengawas / Fungsional"
+        PENGAWAS_FUNGSIONAL -> "Pejabat Administrator"
+        ADMINISTRATOR, KEPALA_DINAS -> "Kepala Dinas"
+    }
+
+    fun submissionRouteSummary(): String = when (this) {
+        PELAKSANA -> "Pelaksana / PPPK ➔ Disahkan oleh Pejabat Pengawas / Fungsional"
+        PENGAWAS_FUNGSIONAL -> "Pejabat Pengawas / Fungsional ➔ Disahkan oleh Pejabat Administrator"
+        ADMINISTRATOR, KEPALA_DINAS -> "Pejabat Administrator ➔ Disahkan oleh Kepala Dinas"
+    }
 
     companion object {
         fun fromRaw(raw: String?): JabatanLevel =

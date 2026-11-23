@@ -72,7 +72,8 @@ fun DashboardScreen(
     onOpenReport: (String) -> Unit,
     onOpenAllReports: (ActivityClassification?) -> Unit,
     onOpenVerificationQueue: () -> Unit,
-    onExportPdf: (List<ActivityReport>) -> Unit
+    onExportPdf: (List<ActivityReport>) -> Unit,
+    onDeleteReport: (ActivityReport) -> Unit
 ) {
     val profile = (profileState as? UiState.Success)?.data
     val reports = (reportsState as? UiState.Success)?.data.orEmpty()
@@ -464,10 +465,11 @@ fun DashboardScreen(
                             EmptyReportsCard(onCreateReport = onCreateReport)
                         }
                     } else {
-                        items(reports.take(6), key = { it.id }) { report ->
+                        items(reports.take(10), key = { it.id }) { report ->
                             ActivityReportCard(
                                 report = report,
-                                onClick = { onOpenReport(report.id) }
+                                onClick = { onOpenReport(report.id) },
+                                onDelete = { onDeleteReport(report) }
                             )
                         }
                     }

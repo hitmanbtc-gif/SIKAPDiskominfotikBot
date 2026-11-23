@@ -45,7 +45,7 @@ object PdfReportGenerator {
         try {
             val dir = File(context.cacheDir, "reports").apply { mkdirs() }
             val timestampTag = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val outputFile = File(dir, "Lapkin_Diskominfotik_Gorontalo_$timestampTag.pdf")
+            val outputFile = File(dir, "SIKAP_Diskominfotik_Gorontalo_$timestampTag.pdf")
 
             val navyPaint = Paint().apply {
                 color = Color.rgb(22, 55, 90)

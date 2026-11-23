@@ -183,6 +183,9 @@ fun TelegramBotScreen(
     var msgCounter by remember { mutableIntStateOf(1) }
 
     // Draft report state inside conversational wizard
+    var draftAuthorTier by remember(profile?.jabatanLevel) {
+        mutableStateOf(profile?.levelEnum() ?: JabatanLevel.PELAKSANA)
+    }
     var draftClassification by remember { mutableStateOf(ActivityClassification.RUTIN) }
     var draftBidang by remember {
         mutableStateOf(
@@ -317,7 +320,7 @@ fun TelegramBotScreen(
                 context = context,
                 profile = profile,
                 reports = reportsToExport,
-                periodLabel = "Laporan Resmi Bot Telegram e-Lapkin",
+                periodLabel = "Laporan Resmi Bot Telegram SIKAP",
                 adminConfig = adminConfig
             ).fold(
                 onSuccess = { pdfFile ->
@@ -368,21 +371,23 @@ fun TelegramBotScreen(
             "Tidak dilampirkan"
         }
         val photoInfo = if (draftPhotoBase64.isNotBlank()) "Terlampir (JPEG Terkompresi)" else "Tidak ada foto"
-        val authorTier = profile?.levelEnum() ?: JabatanLevel.PELAKSANA
+        val authorTier = draftAuthorTier
         val (targetRole, targetChat) = when (authorTier) {
             JabatanLevel.PELAKSANA ->
-                "Pejabat Pengawas / Fungsional (Pengesah Langsung • Jenjang PPPK/Pelaksana hanya sampai Pengawas/JF)" to (profile?.pengawasPhone?.ifBlank { adminConfig.pengawasChatId }.orEmpty())
+                "Pejabat Pengawas / Fungsional (Pengesah Laporan Pelaksana/PPPK)" to (profile?.pengawasPhone?.ifBlank { adminConfig.pengawasChatId }.orEmpty())
             JabatanLevel.PENGAWAS_FUNGSIONAL ->
-                "Pejabat Administrator (Pengesah Langsung • Jenjang Pengawas/JF hanya sampai Administrator)" to (profile?.adminPhone?.ifBlank { adminConfig.adminChatId }.orEmpty())
+                "Pejabat Administrator (Pengesah Laporan Pengawas/Fungsional)" to (profile?.adminPhone?.ifBlank { adminConfig.adminChatId }.orEmpty())
             JabatanLevel.ADMINISTRATOR, JabatanLevel.KEPALA_DINAS ->
-                "Kepala Dinas (Pengesah Akhir)" to (profile?.kadisPhone?.ifBlank { adminConfig.kadisChatId }.orEmpty())
+                "Kepala Dinas (Pengesah Laporan Pejabat Administrator)" to (profile?.kadisPhone?.ifBlank { adminConfig.kadisChatId }.orEmpty())
         }
         val chatDisplay = targetChat.ifBlank { adminConfig.defaultGroupChatId }.ifBlank { "Pilih Chat di Aplikasi Telegram" }
 
         addBotMessage(
-            text = "📋 KONFIRMASI PENGIRIMAN BOT TELEGRAM\n" +
+            text = "📋 KONFIRMASI PENGAJUAN LAPORAN SIKAP\n" +
                 "────────────────────\n" +
                 "• Tanggal: ${todayIso()} (08:00 - 16:00 WITA)\n" +
+                "• Jenjang Pengaju: ${authorTier.label}\n" +
+                "• Alur Pengesahan: ${authorTier.submissionRouteSummary()}\n" +
                 "• Klasifikasi: ${draftClassification.label}\n" +
                 "• Bidang/Sekretariat: $draftBidang\n" +
                 "• Sub Kegiatan: $draftSubKegiatan\n" +
@@ -391,12 +396,15 @@ fun TelegramBotScreen(
                 "• Lokasi: $draftLocation\n" +
                 "• GPS: $gpsInfo\n" +
                 "• Bukti Foto: $photoInfo\n" +
-                "• Tujuan Berjenjang: $targetRole ($chatDisplay)\n\n" +
-                "Pilih metode pengiriman Telegram:",
+                "• Pejabat Pengesah Tujuan: $targetRole ($chatDisplay)\n\n" +
+                "Anda dapat mengubah jenjang pengajuan atau langsung mengirim laporan:",
             buttons = listOf(
+                TgInlineButton("SET_TIER_PELAKSANA", "👤 Jenjang: Pelaksana/PPPK ➔ Pengawas/JF"),
+                TgInlineButton("SET_TIER_PENGAWAS", "🎖️ Jenjang: Pengawas/JF ➔ Administrator"),
+                TgInlineButton("SET_TIER_ADMIN", "🏛️ Jenjang: Administrator ➔ Kepala Dinas"),
                 TgInlineButton("KIRIM_TG_LANGSUNG", "✈️ Simpan & Kirim ke Telegram Nyata"),
                 TgInlineButton("KIRIM_TG_PDF", "📄 Simpan & Unggah PDF A4 ke Telegram"),
-                TgInlineButton("KIRIM_BERJENJANG", "☁️ Simpan ke Cloud Saja"),
+                TgInlineButton("KIRIM_BERJENJANG", "☁️ Simpan & Ajukan ke Pejabat Pengesah"),
                 TgInlineButton("BATAL_LAPOR", "❌ Batal")
             )
         )
@@ -518,6 +526,7 @@ fun TelegramBotScreen(
 
     fun startNewReportWizard() {
         currentStep = TgBotStep.ASK_CLASSIFICATION
+        draftAuthorTier = profile?.levelEnum() ?: JabatanLevel.PELAKSANA
         draftSummary = ""
         draftDescription = ""
         draftLocation = ""
@@ -984,6 +993,27 @@ fun TelegramBotScreen(
             }
 
             TgBotStep.READY_CONFIRM -> {
+                when (text) {
+                    "SET_TIER_PELAKSANA" -> {
+                        draftAuthorTier = JabatanLevel.PELAKSANA
+                        addUserMessage("Jenjang Pengajuan: Pelaksana / PPPK ➔ Disahkan Pejabat Pengawas / Fungsional")
+                        promptConfirmStep()
+                        return
+                    }
+                    "SET_TIER_PENGAWAS" -> {
+                        draftAuthorTier = JabatanLevel.PENGAWAS_FUNGSIONAL
+                        addUserMessage("Jenjang Pengajuan: Pejabat Pengawas / Fungsional ➔ Disahkan Pejabat Administrator")
+                        promptConfirmStep()
+                        return
+                    }
+                    "SET_TIER_ADMIN" -> {
+                        draftAuthorTier = JabatanLevel.ADMINISTRATOR
+                        addUserMessage("Jenjang Pengajuan: Pejabat Administrator ➔ Disahkan Kepala Dinas")
+                        promptConfirmStep()
+                        return
+                    }
+                }
+
                 val sendRealTgText = text == "KIRIM_TG_LANGSUNG"
                 val sendRealTgPdf = text == "KIRIM_TG_PDF"
                 val sendCloudOnly = text == "KIRIM_BERJENJANG" || text.equals("kirim", ignoreCase = true)
@@ -991,11 +1021,14 @@ fun TelegramBotScreen(
                 if (!sendRealTgText && !sendRealTgPdf && !sendCloudOnly) {
                     addUserMessage(text)
                     addBotMessage(
-                        text = "Silakan pilih metode pengiriman Telegram di bawah:",
+                        text = "Silakan pilih jenjang pengajuan atau metode pengiriman Telegram di bawah:",
                         buttons = listOf(
+                            TgInlineButton("SET_TIER_PELAKSANA", "👤 Jenjang: Pelaksana/PPPK ➔ Pengawas/JF"),
+                            TgInlineButton("SET_TIER_PENGAWAS", "🎖️ Jenjang: Pengawas/JF ➔ Administrator"),
+                            TgInlineButton("SET_TIER_ADMIN", "🏛️ Jenjang: Administrator ➔ Kepala Dinas"),
                             TgInlineButton("KIRIM_TG_LANGSUNG", "✈️ Simpan & Kirim ke Telegram Nyata"),
                             TgInlineButton("KIRIM_TG_PDF", "📄 Simpan & Unggah PDF A4 ke Telegram"),
-                            TgInlineButton("KIRIM_BERJENJANG", "☁️ Simpan ke Cloud Saja"),
+                            TgInlineButton("KIRIM_BERJENJANG", "☁️ Simpan & Ajukan ke Pejabat Pengesah"),
                             TgInlineButton("BATAL_LAPOR", "❌ Batal")
                         )
                     )
@@ -1006,10 +1039,10 @@ fun TelegramBotScreen(
                     when {
                         sendRealTgPdf -> "📄 Simpan & Unggah Dokumen PDF ke Telegram"
                         sendRealTgText -> "✈️ Simpan & Kirim Laporan ke Telegram Nyata"
-                        else -> "☁️ Simpan & Kirim Berjenjang"
+                        else -> "☁️ Simpan & Ajukan Berjenjang"
                     }
                 )
-                val authorTier = profile?.levelEnum() ?: JabatanLevel.PELAKSANA
+                val authorTier = draftAuthorTier
                 val newReport = ActivityReport(
                     authorName = profile?.fullName?.ifBlank { currentUserDisplayName }
                         ?: currentUserDisplayName.ifBlank { "ASN Diskominfotik" },

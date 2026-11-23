@@ -22,22 +22,30 @@ import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.WorkHistory
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -233,10 +241,44 @@ fun ActivityReportCard(
     report: ActivityReport,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    showAuthor: Boolean = false
+    showAuthor: Boolean = false,
+    onDelete: (() -> Unit)? = null
 ) {
     val classification = report.classificationEnum()
     val status = report.statusEnum()
+    val authorTier = report.authorTierEnum()
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirm && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Hapus Laporan Kegiatan?") },
+            text = {
+                Text(
+                    "Apakah Anda yakin ingin menghapus laporan \"${report.summary}\" (${report.activityDate})?"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirm = false
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier.testTag("confirm_delete_report_${report.id}")
+                ) {
+                    Text("Ya, Hapus", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
 
     Card(
         modifier = modifier
@@ -272,9 +314,16 @@ fun ActivityReportCard(
                 overflow = TextOverflow.Ellipsis
             )
 
+            Text(
+                text = "Jenjang: ${authorTier.submissionRouteSummary()}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+
             if (showAuthor && report.authorName.isNotBlank()) {
                 Text(
-                    text = "${report.authorName} • ${report.authorTierEnum().shortLabel}",
+                    text = "${report.authorName} • ${authorTier.shortLabel}",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -290,79 +339,117 @@ fun ActivityReportCard(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Schedule,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "${report.activityDate} • ${report.startTime}-${report.endTime}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                if (report.gpsCaptured) {
-                    Surface(
-                        color = GorontaloTeal100,
-                        shape = RoundedCornerShape(6.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        Icon(
+                            imageVector = Icons.Filled.Schedule,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "${report.activityDate} • ${report.startTime}-${report.endTime}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (report.gpsCaptured) {
+                        Surface(
+                            color = GorontaloTeal100,
+                            shape = RoundedCornerShape(6.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.LocationOn,
-                                contentDescription = "GPS Terverifikasi",
-                                tint = GorontaloTeal700,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Text(
-                                text = "GPS",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = GorontaloTeal700
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.LocationOn,
+                                    contentDescription = "GPS Terverifikasi",
+                                    tint = GorontaloTeal700,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = "GPS",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = GorontaloTeal700
+                                )
+                            }
+                        }
+                    }
+
+                    if (report.photoBase64.isNotBlank()) {
+                        Surface(
+                            color = CivicIndigo100,
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.PhotoCamera,
+                                    contentDescription = "Foto Bukti",
+                                    tint = CivicIndigo700,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = "Foto",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = CivicIndigo700
+                                )
+                            }
                         }
                     }
                 }
 
-                if (report.photoBase64.isNotBlank()) {
-                    Surface(
-                        color = CivicIndigo100,
-                        shape = RoundedCornerShape(6.dp)
+                if (onDelete != null) {
+                    OutlinedButton(
+                        onClick = { showDeleteConfirm = true },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
+                        modifier = Modifier.testTag("delete_report_${report.id}")
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.PhotoCamera,
-                                contentDescription = "Foto Bukti",
-                                tint = CivicIndigo700,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Text(
-                                text = "Foto",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = CivicIndigo700
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Filled.DeleteOutline,
+                            contentDescription = "Hapus Laporan",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Hapus",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
         }
     }
 }
+
+private data class TierStepVisual(
+    val title: String,
+    val actor: String,
+    val note: String,
+    val isCompleted: Boolean,
+    val isActive: Boolean
+)
 
 @Composable
 fun HierarchicalStepperCard(
@@ -371,85 +458,148 @@ fun HierarchicalStepperCard(
 ) {
     val status = report.statusEnum()
     val authorTier = report.authorTierEnum()
-    val approvedByPengawas = report.canPengawasForwardToAdmin() || report.pengawasReviewerName.isNotBlank()
-    val approvedByAdmin = report.canAdminForwardToKadis() || report.adminReviewerName.isNotBlank()
+    val isSubmitted = status != ReportStatus.DRAFT && status != ReportStatus.REVISION
+    val approvedByPengawas = report.canPengawasForwardToAdmin() ||
+        report.pengawasReviewerName.isNotBlank() ||
+        status == ReportStatus.SUBMITTED_ADMINISTRATOR ||
+        status == ReportStatus.SUBMITTED_KADIS ||
+        (status == ReportStatus.APPROVED_FINAL && authorTier == JabatanLevel.PELAKSANA)
+    val approvedByAdmin = report.canAdminForwardToKadis() ||
+        report.adminReviewerName.isNotBlank() ||
+        status == ReportStatus.SUBMITTED_KADIS ||
+        (status == ReportStatus.APPROVED_FINAL && (report.currentTier == "ADMINISTRATOR" || report.currentTier == "COMPLETED"))
     val approvedByKadis = (status == ReportStatus.APPROVED_FINAL && report.currentTier == "COMPLETED") ||
         report.kadisReviewerName.isNotBlank()
 
-    val currentStep = when (status) {
-        ReportStatus.DRAFT, ReportStatus.REVISION -> 0
-        ReportStatus.SUBMITTED_PENGAWAS -> 1
-        ReportStatus.SUBMITTED_ADMINISTRATOR -> 2
-        ReportStatus.SUBMITTED_KADIS -> 3
-        ReportStatus.APPROVED_FINAL -> when {
-            report.canPengawasForwardToAdmin() -> 2
-            report.canAdminForwardToKadis() -> 3
-            else -> 4
-        }
-    }
-
     val tierFlowSubtitle = when (authorTier) {
         JabatanLevel.PELAKSANA ->
-            "Jenjang Pelaporan PPPK/Pelaksana: Hanya sampai Pejabat Pengawas/Fungsional (Pengesah Langsung). Pengawas/Fungsional dapat memilih laporan untuk diteruskan ke Pejabat Administrator."
+            "Jenjang Pengajuan Pelaksana / PPPK ➔ Diajukan langsung ke Pejabat Pengawas / Fungsional untuk Disahkan."
         JabatanLevel.PENGAWAS_FUNGSIONAL ->
-            "Jenjang Pelaporan Pejabat Pengawas/Fungsional: Hanya sampai Pejabat Administrator (Pengesah Langsung). Administrator dapat memilih laporan untuk diteruskan ke Kepala Dinas."
+            "Jenjang Pengajuan Pejabat Pengawas / Fungsional ➔ Diajukan langsung ke Pejabat Administrator untuk Disahkan."
         else ->
-            "Jenjang Pelaporan Pejabat Administrator: Langsung disahkan oleh Kepala Dinas."
+            "Jenjang Pengajuan Pejabat Administrator ➔ Diajukan langsung kepada Kepala Dinas untuk Disahkan."
     }
 
-    val steps = listOf(
-        Triple(
-            "1. Pelapor (${authorTier.label})",
-            report.authorName.ifBlank { "Pelapor ASN" },
-            "Pengajuan Laporan Kegiatan Harian"
-        ),
-        Triple(
-            "2. Pejabat Pengawas / Fungsional (Pengesah Laporan PPPK/Pelaksana)",
-            report.pengawasReviewerName.ifBlank { report.pengawasEmail.ifBlank { "Pejabat Pengawas / Fungsional" } },
-            report.pengawasNote.ifBlank {
-                when {
-                    report.canPengawasForwardToAdmin() ->
-                        "Telah Disahkan oleh Pejabat Pengawas/Fungsional (Dapat dipilih untuk diteruskan ke Administrator)"
-                    approvedByPengawas ->
-                        "Disahkan & Diteruskan ke Pejabat Administrator"
-                    authorTier != JabatanLevel.PELAKSANA ->
-                        "Pelapor berasal dari jenjang ${authorTier.shortLabel}"
-                    else ->
-                        "Menunggu pengesahan langsung Pejabat Pengawas/Fungsional"
-                }
+    val steps: List<TierStepVisual> = when (authorTier) {
+        JabatanLevel.PELAKSANA -> buildList {
+            add(
+                TierStepVisual(
+                    title = "1. Pengajuan Laporan (Pelaksana / PPPK)",
+                    actor = report.authorName.ifBlank { "Pelapor Pelaksana / PPPK" },
+                    note = if (isSubmitted) "Telah diajukan ke Pejabat Pengawas / Fungsional" else "Belum diajukan (Draf / Revisi)",
+                    isCompleted = isSubmitted,
+                    isActive = !isSubmitted
+                )
+            )
+            add(
+                TierStepVisual(
+                    title = "2. Pengesahan Pejabat Pengawas / Fungsional",
+                    actor = report.pengawasReviewerName.ifBlank { report.pengawasEmail.ifBlank { "Pejabat Pengawas / Fungsional" } },
+                    note = report.pengawasNote.ifBlank {
+                        if (approvedByPengawas) {
+                            "Telah Disahkan oleh Pejabat Pengawas / Fungsional"
+                        } else {
+                            "Menunggu pengesahan Pejabat Pengawas / Fungsional"
+                        }
+                    },
+                    isCompleted = approvedByPengawas,
+                    isActive = status == ReportStatus.SUBMITTED_PENGAWAS
+                )
+            )
+            if (status == ReportStatus.SUBMITTED_ADMINISTRATOR || approvedByAdmin) {
+                add(
+                    TierStepVisual(
+                        title = "3. Penerusan Pilihan ke Pejabat Administrator",
+                        actor = report.adminReviewerName.ifBlank { report.adminEmail.ifBlank { "Pejabat Administrator" } },
+                        note = report.adminNote.ifBlank {
+                            if (approvedByAdmin) "Disahkan oleh Pejabat Administrator"
+                            else "Diteruskan oleh Pengawas/Fungsional ke Pejabat Administrator"
+                        },
+                        isCompleted = approvedByAdmin,
+                        isActive = status == ReportStatus.SUBMITTED_ADMINISTRATOR
+                    )
+                )
             }
-        ),
-        Triple(
-            "3. Pejabat Administrator (Pengesah Laporan Pengawas/JF & Penerusan Pilihan)",
-            report.adminReviewerName.ifBlank { report.adminEmail.ifBlank { "Kabid / Sekretaris" } },
-            report.adminNote.ifBlank {
-                when {
-                    report.canAdminForwardToKadis() ->
-                        "Telah Disahkan oleh Pejabat Administrator (Dapat dipilih untuk diteruskan ke Kepala Dinas)"
-                    approvedByAdmin ->
-                        "Disahkan & Diteruskan ke Kepala Dinas"
-                    status == ReportStatus.SUBMITTED_ADMINISTRATOR ->
-                        "Menunggu pengesahan langsung Pejabat Administrator"
-                    else ->
-                        "Opsional: Hanya jika laporan dipilih untuk diteruskan oleh Pengawas/Fungsional"
-                }
+            if (status == ReportStatus.SUBMITTED_KADIS || approvedByKadis) {
+                add(
+                    TierStepVisual(
+                        title = "4. Penerusan Pilihan kepada Kepala Dinas",
+                        actor = report.kadisReviewerName.ifBlank { report.kadisEmail.ifBlank { "Kepala Dinas" } },
+                        note = report.kadisNote.ifBlank {
+                            if (approvedByKadis) "Disahkan oleh Kepala Dinas"
+                            else "Menunggu pengesahan Kepala Dinas"
+                        },
+                        isCompleted = approvedByKadis,
+                        isActive = status == ReportStatus.SUBMITTED_KADIS
+                    )
+                )
             }
-        ),
-        Triple(
-            "4. Kepala Dinas (Pengesah Laporan Administrator & Penerusan Pilihan)",
-            report.kadisReviewerName.ifBlank { report.kadisEmail.ifBlank { "Kepala Dinas Kominfo & Statistik" } },
-            report.kadisNote.ifBlank {
-                when {
-                    approvedByKadis ->
-                        "Telah Disahkan Final oleh Kepala Dinas"
-                    status == ReportStatus.SUBMITTED_KADIS ->
+        }
+
+        JabatanLevel.PENGAWAS_FUNGSIONAL -> buildList {
+            add(
+                TierStepVisual(
+                    title = "1. Pengajuan Laporan (Pejabat Pengawas / Fungsional)",
+                    actor = report.authorName.ifBlank { "Pejabat Pengawas / Fungsional" },
+                    note = if (isSubmitted) "Telah diajukan ke Pejabat Administrator" else "Belum diajukan (Draf / Revisi)",
+                    isCompleted = isSubmitted,
+                    isActive = !isSubmitted
+                )
+            )
+            add(
+                TierStepVisual(
+                    title = "2. Pengesahan Pejabat Administrator",
+                    actor = report.adminReviewerName.ifBlank { report.adminEmail.ifBlank { "Pejabat Administrator / Kabid / Sekretaris" } },
+                    note = report.adminNote.ifBlank {
+                        if (approvedByAdmin) {
+                            "Telah Disahkan oleh Pejabat Administrator"
+                        } else {
+                            "Menunggu pengesahan Pejabat Administrator"
+                        }
+                    },
+                    isCompleted = approvedByAdmin,
+                    isActive = status == ReportStatus.SUBMITTED_ADMINISTRATOR
+                )
+            )
+            if (status == ReportStatus.SUBMITTED_KADIS || approvedByKadis) {
+                add(
+                    TierStepVisual(
+                        title = "3. Penerusan Pilihan kepada Kepala Dinas",
+                        actor = report.kadisReviewerName.ifBlank { report.kadisEmail.ifBlank { "Kepala Dinas" } },
+                        note = report.kadisNote.ifBlank {
+                            if (approvedByKadis) "Disahkan oleh Kepala Dinas"
+                            else "Diteruskan oleh Administrator kepada Kepala Dinas"
+                        },
+                        isCompleted = approvedByKadis,
+                        isActive = status == ReportStatus.SUBMITTED_KADIS
+                    )
+                )
+            }
+        }
+
+        JabatanLevel.ADMINISTRATOR, JabatanLevel.KEPALA_DINAS -> listOf(
+            TierStepVisual(
+                title = "1. Pengajuan Laporan (Pejabat Administrator)",
+                actor = report.authorName.ifBlank { "Pejabat Administrator" },
+                note = if (isSubmitted) "Telah diajukan kepada Kepala Dinas" else "Belum diajukan (Draf / Revisi)",
+                isCompleted = isSubmitted,
+                isActive = !isSubmitted
+            ),
+            TierStepVisual(
+                title = "2. Pengesahan Kepala Dinas",
+                actor = report.kadisReviewerName.ifBlank { report.kadisEmail.ifBlank { "Kepala Dinas Kominfo & Statistik" } },
+                note = report.kadisNote.ifBlank {
+                    if (approvedByKadis) {
+                        "Telah Disahkan oleh Kepala Dinas"
+                    } else {
                         "Menunggu pengesahan Kepala Dinas"
-                    else ->
-                        "Opsional: Hanya jika laporan dipilih untuk diteruskan oleh Pejabat Administrator"
-                }
-            }
+                    }
+                },
+                isCompleted = approvedByKadis,
+                isActive = status == ReportStatus.SUBMITTED_KADIS
+            )
         )
-    )
+    }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -472,7 +622,7 @@ fun HierarchicalStepperCard(
                 )
                 Column {
                     Text(
-                        text = "Jenjang Pelaporan & Pengesahan",
+                        text = "Jenjang Pengajuan & Pengesahan Laporan",
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
@@ -516,25 +666,14 @@ fun HierarchicalStepperCard(
                 }
             }
 
-            steps.forEachIndexed { index, (title, actor, note) ->
-                val isCompleted = when (index) {
-                    0 -> status != ReportStatus.DRAFT && status != ReportStatus.REVISION
-                    1 -> approvedByPengawas || currentStep > 1
-                    2 -> approvedByAdmin || currentStep > 2
-                    3 -> approvedByKadis
-                    else -> false
-                }
-                val isActive = currentStep == index &&
-                    status != ReportStatus.APPROVED_FINAL &&
-                    status != ReportStatus.DRAFT &&
-                    status != ReportStatus.REVISION
+            steps.forEachIndexed { index, step ->
                 val circleBg = when {
-                    isCompleted -> GorontaloTeal600Color()
-                    isActive -> MaterialTheme.colorScheme.primary
+                    step.isCompleted -> GorontaloTeal600Color()
+                    step.isActive -> MaterialTheme.colorScheme.primary
                     else -> MaterialTheme.colorScheme.surfaceVariant
                 }
                 val circleFg = when {
-                    isCompleted || isActive -> Color.White
+                    step.isCompleted || step.isActive -> Color.White
                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                 }
 
@@ -551,7 +690,7 @@ fun HierarchicalStepperCard(
                                 .background(circleBg),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (isCompleted) {
+                            if (step.isCompleted) {
                                 Icon(
                                     imageVector = Icons.Filled.Check,
                                     contentDescription = "Selesai",
@@ -573,7 +712,7 @@ fun HierarchicalStepperCard(
                                     .width(2.dp)
                                     .height(22.dp)
                                     .background(
-                                        if (isCompleted) GorontaloTeal600Color()
+                                        if (step.isCompleted) GorontaloTeal600Color()
                                         else MaterialTheme.colorScheme.outlineVariant
                                     )
                             )
@@ -581,18 +720,18 @@ fun HierarchicalStepperCard(
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = title,
+                            text = step.title,
                             style = MaterialTheme.typography.titleSmall,
-                            color = if (isActive || isCompleted) MaterialTheme.colorScheme.onSurface
+                            color = if (step.isActive || step.isCompleted) MaterialTheme.colorScheme.onSurface
                             else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = actor,
+                            text = step.actor,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = note,
+                            text = step.note,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -605,4 +744,5 @@ fun HierarchicalStepperCard(
 
 @Composable
 private fun GorontaloTeal600Color(): Color = MaterialTheme.colorScheme.secondary
+
 

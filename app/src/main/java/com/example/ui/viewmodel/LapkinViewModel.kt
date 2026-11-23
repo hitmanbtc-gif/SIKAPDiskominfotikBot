@@ -238,11 +238,11 @@ class LapkinViewModel(
             _isBusy.value = false
             result.fold(
                 onSuccess = {
-                    _feedbackMessage.value = "Draf laporan dihapus."
+                    _feedbackMessage.value = "Laporan kegiatan berhasil dihapus."
                     onSuccess()
                 },
                 onFailure = { e ->
-                    _feedbackMessage.value = e.localizedMessage ?: "Gagal menghapus draf."
+                    _feedbackMessage.value = e.localizedMessage ?: "Gagal menghapus laporan kegiatan."
                 }
             )
         }

@@ -332,7 +332,7 @@ class LapkinRepository(
             val pEmail = report.pengawasEmail.trim().lowercase().take(120)
             val aEmail = report.adminEmail.trim().lowercase().take(120)
             val kEmail = report.kadisEmail.trim().lowercase().take(120)
-            val reviewers = listOf(pEmail, aEmail, kEmail, normalizedEmail)
+            val reviewers = listOf(pEmail, aEmail, kEmail, normalizedEmail, DiskominfotikCatalog.ADMIN_EMAIL)
                 .filter { it.isNotBlank() }
                 .distinct()
                 .take(5)

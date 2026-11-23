@@ -304,8 +304,9 @@ test("Hierarchical review workflow: assigned reviewer can escalate/approve; cann
     })
   );
 
-  // Author cannot delete submitted report
-  await assertFails(aliceDb.collection("activity_reports").doc("rep_flow").delete());
+  // Non-owner (even assigned reviewer or intruder) cannot delete another user's report
+  await assertFails(bobDb.collection("activity_reports").doc("rep_flow").delete());
+  await assertFails(charlieDb.collection("activity_reports").doc("rep_flow").delete());
 
   // Kepala Dinas (admin) finalizes report
   await assertSucceeds(
@@ -327,4 +328,7 @@ test("Hierarchical review workflow: assigned reviewer can escalate/approve; cann
       updatedAt: new Date(Date.now() - 200),
     })
   );
+
+  // Report owner can delete their report from Dashboard Rekap
+  await assertSucceeds(aliceDb.collection("activity_reports").doc("rep_flow").delete());
 });

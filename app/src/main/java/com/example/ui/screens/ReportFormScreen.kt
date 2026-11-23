@@ -153,6 +153,13 @@ fun ReportFormScreen(
     var kadisEmail by remember(existingReport?.id, profile?.kadisEmail) {
         mutableStateOf(existingReport?.kadisEmail?.ifBlank { null } ?: profile?.kadisEmail.orEmpty())
     }
+    var selectedAuthorTier by remember(existingReport?.id, profile?.jabatanLevel) {
+        mutableStateOf(
+            existingReport?.authorTierEnum()
+                ?: profile?.levelEnum()
+                ?: JabatanLevel.PELAKSANA
+        )
+    }
 
     var formValidationError by remember { mutableStateOf<String?>(null) }
     var bidangDropdownExpanded by remember { mutableStateOf(false) }
@@ -222,7 +229,7 @@ fun ReportFormScreen(
     }
 
     fun buildReportDraft(): ActivityReport {
-        val authorTier = profile?.levelEnum() ?: JabatanLevel.PELAKSANA
+        val authorTier = selectedAuthorTier
         return ActivityReport(
             id = existingReport?.id.orEmpty(),
             userId = existingReport?.userId.orEmpty(),
@@ -727,8 +734,7 @@ fun ReportFormScreen(
                     }
                 }
 
-                // 7. Tujuan Pengesah Sesuai Jenjang Pelaporan
-                val authorTier = profile?.levelEnum() ?: JabatanLevel.PELAKSANA
+                // 7. Jenjang Pengajuan & Pejabat Pengesah Laporan
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -737,23 +743,59 @@ fun ReportFormScreen(
                 ) {
                     Column(
                         modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = "Jenjang Pengesahan Laporan (${authorTier.shortLabel})",
+                            text = "Jenjang Pengajuan & Pengesahan Laporan *",
                             style = MaterialTheme.typography.titleSmall
                         )
-                        when (authorTier) {
+                        Text(
+                            text = "Pilih jenjang jabatan pengaju laporan (otomatis menentukan pejabat pengesah sesuai hirarki):",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        val submissionTiers = listOf(
+                            JabatanLevel.PELAKSANA to "1. Pelaksana / PPPK ➔ Disahkan Pejabat Pengawas / Fungsional",
+                            JabatanLevel.PENGAWAS_FUNGSIONAL to "2. Pejabat Pengawas / Fungsional ➔ Disahkan Pejabat Administrator",
+                            JabatanLevel.ADMINISTRATOR to "3. Pejabat Administrator ➔ Disahkan Kepala Dinas"
+                        )
+                        submissionTiers.forEach { (tier, labelText) ->
+                            val isSelected = selectedAuthorTier == tier ||
+                                (selectedAuthorTier == JabatanLevel.KEPALA_DINAS && tier == JabatanLevel.ADMINISTRATOR)
+                            Surface(
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(
+                                    width = if (isSelected) 1.5.dp else 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { selectedAuthorTier = tier }
+                                    .testTag("tier_option_${tier.name}")
+                            ) {
+                                Text(
+                                    text = labelText,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                                )
+                            }
+                        }
+
+                        when (selectedAuthorTier) {
                             JabatanLevel.PELAKSANA -> {
                                 Text(
-                                    text = "Jenjang pelaporan PPPK / Pelaksana hanya sampai ke Pejabat Pengawas / Fungsional (yang langsung mengesahkan laporan, dan dapat memilih laporan mana yang diteruskan ke Pejabat Administrator).",
+                                    text = "Jenjang Pengajuan: Laporan dari Pelaksana / PPPK diajukan langsung ke Pejabat Pengawas / Fungsional untuk disahkan.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 OutlinedTextField(
                                     value = pengawasEmail,
                                     onValueChange = { pengawasEmail = it },
-                                    label = { Text("Email Pejabat Pengawas / Fungsional (Pengesah Langsung)") },
+                                    label = { Text("Email Pejabat Pengawas / Fungsional (Pejabat Pengesah)") },
+                                    placeholder = { Text("Kosongkan jika menguji pengesahan dengan akun sendiri") },
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
                                     colors = lapkinTextFieldColors(),
@@ -763,14 +805,15 @@ fun ReportFormScreen(
                             }
                             JabatanLevel.PENGAWAS_FUNGSIONAL -> {
                                 Text(
-                                    text = "Jenjang pelaporan Pejabat Pengawas / Fungsional hanya sampai ke Pejabat Administrator (yang mengesahkan laporan, dan memilih laporan mana yang diteruskan ke Kepala Dinas).",
+                                    text = "Jenjang Pengajuan: Laporan dari Pejabat Pengawas / Fungsional diajukan langsung ke Pejabat Administrator untuk disahkan.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 OutlinedTextField(
                                     value = adminEmail,
                                     onValueChange = { adminEmail = it },
-                                    label = { Text("Email Pejabat Administrator / Kabid / Sekretaris (Pengesah Langsung)") },
+                                    label = { Text("Email Pejabat Administrator / Kabid / Sekretaris (Pejabat Pengesah)") },
+                                    placeholder = { Text("Kosongkan jika menguji pengesahan dengan akun sendiri") },
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
                                     colors = lapkinTextFieldColors(),
@@ -780,14 +823,15 @@ fun ReportFormScreen(
                             }
                             JabatanLevel.ADMINISTRATOR, JabatanLevel.KEPALA_DINAS -> {
                                 Text(
-                                    text = "Jenjang pelaporan Pejabat Administrator diteruskan langsung kepada Kepala Dinas sebagai Pejabat Pengesah Akhir.",
+                                    text = "Jenjang Pengajuan: Laporan dari Pejabat Administrator diajukan langsung kepada Kepala Dinas untuk disahkan.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 OutlinedTextField(
                                     value = kadisEmail,
                                     onValueChange = { kadisEmail = it },
-                                    label = { Text("Email Kepala Dinas (Pengesah Akhir)") },
+                                    label = { Text("Email Kepala Dinas (Pejabat Pengesah)") },
+                                    placeholder = { Text("Kosongkan jika menguji pengesahan dengan akun sendiri") },
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
                                     colors = lapkinTextFieldColors(),

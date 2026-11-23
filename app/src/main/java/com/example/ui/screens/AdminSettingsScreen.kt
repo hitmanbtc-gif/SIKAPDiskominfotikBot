@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Save
@@ -56,6 +58,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,8 +67,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.data.model.ActivityReport
 import com.example.data.model.AdminBotConfig
@@ -84,6 +90,7 @@ import kotlinx.coroutines.launch
 private val TgBlue = Color(0xFF2481CC)
 private val TgDarkBlue = Color(0xFF1B619B)
 private val TgLightSurface = Color(0xFFEAF3FA)
+private const val ADMIN_ACCESS_PIN = "1212"
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -101,6 +108,43 @@ fun AdminSettingsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    var isPinUnlocked by rememberSaveable { mutableStateOf(false) }
+    var pinInput by rememberSaveable { mutableStateOf("") }
+    var pinError by remember { mutableStateOf<String?>(null) }
+
+    if (!isPinUnlocked) {
+        AdminPinGateCard(
+            pinInput = pinInput,
+            pinError = pinError,
+            onPinChange = { newPin ->
+                val digitsOnly = newPin.filter { it.isDigit() }.take(4)
+                pinInput = digitsOnly
+                pinError = null
+                if (digitsOnly.length == 4) {
+                    if (digitsOnly == ADMIN_ACCESS_PIN) {
+                        isPinUnlocked = true
+                        pinError = null
+                    } else {
+                        pinError = "PIN salah! Masukkan PIN 4 digit yang benar untuk mengakses Panel Admin."
+                    }
+                }
+            },
+            onUnlockClick = {
+                if (pinInput == ADMIN_ACCESS_PIN) {
+                    isPinUnlocked = true
+                    pinError = null
+                } else {
+                    pinError = "PIN salah! Masukkan PIN 4 digit yang benar untuk mengakses Panel Admin."
+                }
+            },
+            onClearPin = {
+                pinInput = ""
+                pinError = null
+            }
+        )
+        return
+    }
 
     var botToken by remember {
         mutableStateOf(TelegramBotService.getSavedAdminBotToken(context))
@@ -206,6 +250,20 @@ fun AdminSettingsScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(alpha = 0.92f)
                             )
+                        }
+                        FilledTonalButton(
+                            onClick = {
+                                isPinUnlocked = false
+                                pinInput = ""
+                                pinError = null
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.testTag("admin_lock_pin_button")
+                        ) {
+                            Icon(Icons.Filled.Lock, contentDescription = "Kunci Panel Admin", modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Kunci PIN", style = MaterialTheme.typography.labelMedium)
                         }
                     }
 
@@ -492,7 +550,7 @@ fun AdminSettingsScreen(
                         value = defaultGroupChatId,
                         onValueChange = { defaultGroupChatId = it },
                         label = { Text("Chat ID Grup / Channel Monitoring Diskominfotik") },
-                        placeholder = { Text("Contoh: -1001928374650 atau @lapkin_gorontalo") },
+                        placeholder = { Text("Contoh: -1001928374650 atau @sikap_gorontalo") },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         colors = lapkinTextFieldColors(),
@@ -550,7 +608,7 @@ fun AdminSettingsScreen(
                                 .ifBlank { pengawasChatId }
                                 .ifBlank { adminChatId }
                                 .ifBlank { kadisChatId }
-                            val testHtml = "<b>✈️ [UJI KONFIGURASI ADMIN BOT TELEGRAM e-LAPKIN]</b>\n" +
+                            val testHtml = "<b>✈️ [UJI KONFIGURASI ADMIN BOT TELEGRAM SIKAP]</b>\n" +
                                 "Instansi: <b>Dinas Kominfo &amp; Statistik Provinsi Gorontalo</b>\n" +
                                 "Admin: <b>${currentUserDisplayName.ifBlank { currentUserEmail }}</b>\n" +
                                 "Bot Handle: <code>$botUsername</code>\n" +
@@ -722,7 +780,7 @@ fun AdminSettingsScreen(
                                 "──────────────────────────────\n" +
                                 "${broadcastAnnouncement.ifBlank { "Harap seluruh ASN segera melengkapi laporan pelaksanaan kegiatan harian." }}\n" +
                                 "──────────────────────────────\n" +
-                                "<i>Diterbitkan oleh Admin e-Lapkin (${currentUserDisplayName.ifBlank { currentUserEmail }})</i>"
+                                "<i>Diterbitkan oleh Admin SIKAP (${currentUserDisplayName.ifBlank { currentUserEmail }})</i>"
                             scope.launch {
                                 if (botToken.contains(":") && targetChat.isNotBlank()) {
                                     TelegramBotService.sendMessageViaBotApi(
@@ -951,7 +1009,7 @@ fun AdminSettingsScreen(
                                                         context = context,
                                                         profile = profile,
                                                         reports = listOf(rep),
-                                                        periodLabel = "Laporan Resmi e-Lapkin",
+                                                        periodLabel = "Laporan Resmi SIKAP",
                                                         adminConfig = adminConfig
                                                     ).onSuccess { pdfFile ->
                                                         val res = TelegramBotService.dispatchPdfToTelegram(
@@ -985,6 +1043,227 @@ fun AdminSettingsScreen(
             }
 
             Spacer(modifier = Modifier.height(72.dp))
+        }
+    }
+}
+
+@Composable
+private fun AdminPinGateCard(
+    pinInput: String,
+    pinError: String?,
+    onPinChange: (String) -> Unit,
+    onUnlockClick: () -> Unit,
+    onClearPin: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .widthIn(max = 460.dp)
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.5.dp, TgBlue)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                GorontaloProvinceLogo(size = 58.dp)
+                Text(
+                    text = "Kunci Akses Panel Admin SIKAP",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "Dinas Komunikasi, Informatika dan Statistik Provinsi Gorontalo\nMasukkan PIN 4 Digit untuk membuka Panel Admin:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                // Visual 4-Digit PIN Boxes
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    for (i in 0 until 4) {
+                        val isFilled = i < pinInput.length
+                        Surface(
+                            color = if (isFilled) TgLightSurface else Color.White,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(
+                                width = if (isFilled) 2.dp else 1.dp,
+                                color = if (isFilled) TgBlue else MaterialTheme.colorScheme.outline
+                            ),
+                            modifier = Modifier.size(54.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = if (isFilled) "●" else "",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = TgDarkBlue,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = pinInput,
+                    onValueChange = onPinChange,
+                    label = { Text("Masukkan PIN 4 Digit Admin") },
+                    placeholder = { Text("4 Digit PIN") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = lapkinTextFieldColors(),
+                    textStyle = lapkinTextFieldTextStyle(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("admin_pin_input")
+                )
+
+                if (pinError != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = pinError,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+
+                // Interactive Numeric Keypad (1-9, Hapus, 0, Buka)
+                val keypadRows = listOf(
+                    listOf("1", "2", "3"),
+                    listOf("4", "5", "6"),
+                    listOf("7", "8", "9")
+                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    keypadRows.forEach { rowDigits ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            rowDigits.forEach { digit ->
+                                OutlinedButton(
+                                    onClick = {
+                                        if (pinInput.length < 4) {
+                                            onPinChange(pinInput + digit)
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
+                                        .testTag("pin_key_$digit")
+                                ) {
+                                    Text(
+                                        text = digit,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedButton(
+                            onClick = onClearPin,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .testTag("pin_key_clear")
+                        ) {
+                            Text(
+                                text = "Reset",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                if (pinInput.length < 4) {
+                                    onPinChange(pinInput + "0")
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .testTag("pin_key_0")
+                        ) {
+                            Text(
+                                text = "0",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                if (pinInput.isNotEmpty()) {
+                                    onPinChange(pinInput.dropLast(1))
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .testTag("pin_key_backspace")
+                        ) {
+                            Text(
+                                text = "⌫",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+
+                Button(
+                    onClick = onUnlockClick,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = TgBlue),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .testTag("admin_unlock_pin_button")
+                ) {
+                    Icon(Icons.Filled.LockOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Buka Panel Admin", fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }

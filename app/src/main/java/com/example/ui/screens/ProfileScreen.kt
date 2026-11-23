@@ -615,7 +615,7 @@ fun ProfileScreen(
                                 JabatanLevel.PENGAWAS_FUNGSIONAL -> adminTgChatId.ifBlank { adminConfig.adminChatId }
                                 else -> kadisTgChatId.ifBlank { adminConfig.kadisChatId }
                             }.ifBlank { myTgChatId }.ifBlank { adminConfig.defaultGroupChatId }
-                            val testHtml = "<b>✈️ [UJI KONEKSI BOT TELEGRAM e-LAPKIN DISKOMINFOTIK]</b>\n" +
+                            val testHtml = "<b>✈️ [UJI KONEKSI BOT TELEGRAM SIKAP DISKOMINFOTIK]</b>\n" +
                                 "Pegawai: <b>${fullName.ifBlank { "ASN Diskominfotik" }}</b>\n" +
                                 "Unit Kerja: <b>$unitBidang</b>\n" +
                                 "Integrasi Bot Telegram untuk pelaporan kegiatan harian berjenjang telah aktif."

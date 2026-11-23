@@ -217,7 +217,7 @@ object TelegramBotService {
         }
 
         return buildString {
-            append("<b>✈️ [BOT TELEGRAM e-LAPKIN DISKOMINFOTIK PROV. GORONTALO]</b>\n")
+            append("<b>✈️ [BOT TELEGRAM SIKAP DISKOMINFOTIK PROV. GORONTALO]</b>\n")
             append("Kepada Yth. <b>${escapeHtml(targetRoleLabel)}</b>\n")
             append("──────────────────────────────\n")
             append("👤 <b>Pegawai</b>: ${escapeHtml(report.authorName)}\n")
@@ -271,7 +271,7 @@ object TelegramBotService {
         }
 
         return buildString {
-            append("✈️ [BOT TELEGRAM e-LAPKIN DISKOMINFOTIK PROV. GORONTALO]\n")
+            append("✈️ [BOT TELEGRAM SIKAP DISKOMINFOTIK PROV. GORONTALO]\n")
             append("Kepada Yth. $targetRoleLabel\n")
             append("──────────────────────────────\n")
             append("👤 Pegawai: ${report.authorName}\n")
@@ -716,7 +716,7 @@ object TelegramBotService {
         forceOpenTelegramApp: Boolean = false
     ): TelegramDispatchResult {
         val (targetChat, roleLabel) = resolveNextReviewerTarget(context, report, profile, adminConfig)
-        val caption = "📄 [DOKUMEN PDF RESMI e-LAPKIN DISKOMINFOTIK PROV. GORONTALO]\n" +
+        val caption = "📄 [DOKUMEN PDF RESMI SIKAP DISKOMINFOTIK PROV. GORONTALO]\n" +
             "Pegawai: ${report.authorName}\n" +
             "Klasifikasi: ${report.classificationEnum().label}\n" +
             "Ringkasan: ${report.summary}\n" +

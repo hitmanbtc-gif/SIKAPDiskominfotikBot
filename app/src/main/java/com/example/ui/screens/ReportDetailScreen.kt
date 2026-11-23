@@ -125,8 +125,9 @@ fun ReportDetailScreen(
 
         val status = report.statusEnum()
         val isOwner = report.userId == currentUserId
-        val canEditOrDelete = isOwner && (status == ReportStatus.DRAFT || status == ReportStatus.REVISION)
         val normalizedEmail = currentUserEmail.trim().lowercase()
+        val canEdit = isOwner && (status == ReportStatus.DRAFT || status == ReportStatus.REVISION)
+        val canDelete = isOwner || normalizedEmail == DiskominfotikCatalog.ADMIN_EMAIL
         val isPendingReview = status == ReportStatus.SUBMITTED_PENGAWAS ||
             status == ReportStatus.SUBMITTED_ADMINISTRATOR ||
             status == ReportStatus.SUBMITTED_KADIS
@@ -479,7 +480,7 @@ fun ReportDetailScreen(
                         .padding(bottom = 24.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    if (canEditOrDelete) {
+                    if (canDelete) {
                         OutlinedButton(
                             onClick = { onDelete(report.id) },
                             enabled = !isBusy,
@@ -491,8 +492,10 @@ fun ReportDetailScreen(
                         ) {
                             Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Hapus")
+                            Text("Hapus Laporan")
                         }
+                    }
+                    if (canEdit) {
                         Button(
                             onClick = { onEdit(report.id) },
                             enabled = !isBusy,
@@ -510,12 +513,12 @@ fun ReportDetailScreen(
                             onClick = { onExportPdf(report) },
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .weight(1f)
                                 .testTag("detail_pdf_cta_button")
                         ) {
                             Icon(Icons.Filled.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Pratinjau & Unduh Laporan PDF")
+                            Text("Unduh PDF")
                         }
                     }
                 }
