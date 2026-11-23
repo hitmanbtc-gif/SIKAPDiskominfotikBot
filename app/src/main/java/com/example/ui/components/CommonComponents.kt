@@ -31,8 +31,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -45,11 +47,17 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.data.model.ActivityClassification
 import com.example.data.model.ActivityReport
+import com.example.data.model.JabatanLevel
 import com.example.data.model.ReportStatus
 import com.example.ui.theme.AmberGold100
 import com.example.ui.theme.AmberGold700
@@ -59,11 +67,53 @@ import com.example.ui.theme.CoralRed100
 import com.example.ui.theme.CoralRed700
 import com.example.ui.theme.GorontaloTeal100
 import com.example.ui.theme.GorontaloTeal700
+import com.example.ui.theme.PlusJakartaSansFamily
 import com.example.ui.theme.VioletAccent100
 import com.example.ui.theme.VioletAccent700
 import com.example.util.ImageHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+@Composable
+fun GorontaloProvinceLogo(
+    modifier: Modifier = Modifier,
+    size: Dp = 44.dp
+) {
+    Image(
+        painter = painterResource(id = R.drawable.ic_logo_gorontalo),
+        contentDescription = "Logo Provinsi Gorontalo",
+        contentScale = ContentScale.Fit,
+        modifier = modifier.size(size)
+    )
+}
+
+@Composable
+fun lapkinTextFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = Color(0xFF090D16),
+    unfocusedTextColor = Color(0xFF090D16),
+    disabledTextColor = Color(0xFF090D16),
+    errorTextColor = Color(0xFF7F1D1D),
+    focusedContainerColor = Color(0xFFFFFFFF),
+    unfocusedContainerColor = Color(0xFFFFFFFF),
+    disabledContainerColor = Color(0xFFF8FAFC),
+    focusedLabelColor = Color(0xFF0B3D70),
+    unfocusedLabelColor = Color(0xFF1E293B),
+    disabledLabelColor = Color(0xFF334155),
+    focusedPlaceholderColor = Color(0xFF334155),
+    unfocusedPlaceholderColor = Color(0xFF334155),
+    focusedBorderColor = Color(0xFF0B3D70),
+    unfocusedBorderColor = Color(0xFF475569),
+    cursorColor = Color(0xFF0B3D70)
+)
+
+@Composable
+fun lapkinTextFieldTextStyle(): TextStyle = TextStyle(
+    fontFamily = PlusJakartaSansFamily,
+    fontWeight = FontWeight.SemiBold,
+    fontSize = 15.5.sp,
+    lineHeight = 22.sp,
+    color = Color(0xFF090D16)
+)
 
 @Composable
 fun classificationStyle(classification: ActivityClassification): Triple<Color, Color, ImageVector> {
@@ -132,7 +182,8 @@ fun ClassificationBadge(
 @Composable
 fun StatusBadge(
     status: ReportStatus,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    overrideLabel: String? = null
 ) {
     val (bg, fg) = statusColors(status)
     Surface(
@@ -141,7 +192,7 @@ fun StatusBadge(
         modifier = modifier
     ) {
         Text(
-            text = status.label,
+            text = overrideLabel ?: status.label,
             style = MaterialTheme.typography.labelMedium,
             color = fg,
             fontWeight = FontWeight.SemiBold,
@@ -207,7 +258,10 @@ fun ActivityReportCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ClassificationBadge(classification = classification)
-                StatusBadge(status = status)
+                StatusBadge(
+                    status = status,
+                    overrideLabel = report.approvalStatusLabel()
+                )
             }
 
             Text(
@@ -316,34 +370,84 @@ fun HierarchicalStepperCard(
     modifier: Modifier = Modifier
 ) {
     val status = report.statusEnum()
+    val authorTier = report.authorTierEnum()
+    val approvedByPengawas = report.canPengawasForwardToAdmin() || report.pengawasReviewerName.isNotBlank()
+    val approvedByAdmin = report.canAdminForwardToKadis() || report.adminReviewerName.isNotBlank()
+    val approvedByKadis = (status == ReportStatus.APPROVED_FINAL && report.currentTier == "COMPLETED") ||
+        report.kadisReviewerName.isNotBlank()
+
     val currentStep = when (status) {
         ReportStatus.DRAFT, ReportStatus.REVISION -> 0
         ReportStatus.SUBMITTED_PENGAWAS -> 1
         ReportStatus.SUBMITTED_ADMINISTRATOR -> 2
         ReportStatus.SUBMITTED_KADIS -> 3
-        ReportStatus.APPROVED_FINAL -> 4
+        ReportStatus.APPROVED_FINAL -> when {
+            report.canPengawasForwardToAdmin() -> 2
+            report.canAdminForwardToKadis() -> 3
+            else -> 4
+        }
+    }
+
+    val tierFlowSubtitle = when (authorTier) {
+        JabatanLevel.PELAKSANA ->
+            "Jenjang Pelaporan PPPK/Pelaksana: Hanya sampai Pejabat Pengawas/Fungsional (Pengesah Langsung). Pengawas/Fungsional dapat memilih laporan untuk diteruskan ke Pejabat Administrator."
+        JabatanLevel.PENGAWAS_FUNGSIONAL ->
+            "Jenjang Pelaporan Pejabat Pengawas/Fungsional: Hanya sampai Pejabat Administrator (Pengesah Langsung). Administrator dapat memilih laporan untuk diteruskan ke Kepala Dinas."
+        else ->
+            "Jenjang Pelaporan Pejabat Administrator: Langsung disahkan oleh Kepala Dinas."
     }
 
     val steps = listOf(
         Triple(
-            "1. PPPK / Pelaksana",
+            "1. Pelapor (${authorTier.label})",
             report.authorName.ifBlank { "Pelapor ASN" },
-            "Pengajuan Laporan Harian"
+            "Pengajuan Laporan Kegiatan Harian"
         ),
         Triple(
-            "2. Pejabat Pengawas / Fungsional",
-            report.pengawasReviewerName.ifBlank { report.pengawasEmail.ifBlank { "Verifikator Tingkat I" } },
-            report.pengawasNote.ifBlank { if (currentStep > 1) "Diverifikasi" else "Menunggu telaah" }
+            "2. Pejabat Pengawas / Fungsional (Pengesah Laporan PPPK/Pelaksana)",
+            report.pengawasReviewerName.ifBlank { report.pengawasEmail.ifBlank { "Pejabat Pengawas / Fungsional" } },
+            report.pengawasNote.ifBlank {
+                when {
+                    report.canPengawasForwardToAdmin() ->
+                        "Telah Disahkan oleh Pejabat Pengawas/Fungsional (Dapat dipilih untuk diteruskan ke Administrator)"
+                    approvedByPengawas ->
+                        "Disahkan & Diteruskan ke Pejabat Administrator"
+                    authorTier != JabatanLevel.PELAKSANA ->
+                        "Pelapor berasal dari jenjang ${authorTier.shortLabel}"
+                    else ->
+                        "Menunggu pengesahan langsung Pejabat Pengawas/Fungsional"
+                }
+            }
         ),
         Triple(
-            "3. Pejabat Administrator",
+            "3. Pejabat Administrator (Pengesah Laporan Pengawas/JF & Penerusan Pilihan)",
             report.adminReviewerName.ifBlank { report.adminEmail.ifBlank { "Kabid / Sekretaris" } },
-            report.adminNote.ifBlank { if (currentStep > 2) "Disetujui" else "Menunggu telaah" }
+            report.adminNote.ifBlank {
+                when {
+                    report.canAdminForwardToKadis() ->
+                        "Telah Disahkan oleh Pejabat Administrator (Dapat dipilih untuk diteruskan ke Kepala Dinas)"
+                    approvedByAdmin ->
+                        "Disahkan & Diteruskan ke Kepala Dinas"
+                    status == ReportStatus.SUBMITTED_ADMINISTRATOR ->
+                        "Menunggu pengesahan langsung Pejabat Administrator"
+                    else ->
+                        "Opsional: Hanya jika laporan dipilih untuk diteruskan oleh Pengawas/Fungsional"
+                }
+            }
         ),
         Triple(
-            "4. Kepala Dinas",
+            "4. Kepala Dinas (Pengesah Laporan Administrator & Penerusan Pilihan)",
             report.kadisReviewerName.ifBlank { report.kadisEmail.ifBlank { "Kepala Dinas Kominfo & Statistik" } },
-            report.kadisNote.ifBlank { if (currentStep >= 4) "Disahkan Final" else "Menunggu pengesahan" }
+            report.kadisNote.ifBlank {
+                when {
+                    approvedByKadis ->
+                        "Telah Disahkan Final oleh Kepala Dinas"
+                    status == ReportStatus.SUBMITTED_KADIS ->
+                        "Menunggu pengesahan Kepala Dinas"
+                    else ->
+                        "Opsional: Hanya jika laporan dipilih untuk diteruskan oleh Pejabat Administrator"
+                }
+            }
         )
     )
 
@@ -366,10 +470,17 @@ fun HierarchicalStepperCard(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
-                Text(
-                    text = "Alur Pelaporan Berjenjang",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Column {
+                    Text(
+                        text = "Jenjang Pelaporan & Pengesahan",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = tierFlowSubtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             if (status == ReportStatus.REVISION && report.lastRevisionNote.isNotBlank()) {
@@ -406,8 +517,17 @@ fun HierarchicalStepperCard(
             }
 
             steps.forEachIndexed { index, (title, actor, note) ->
-                val isCompleted = currentStep > index || status == ReportStatus.APPROVED_FINAL
-                val isActive = currentStep == index && status != ReportStatus.APPROVED_FINAL && status != ReportStatus.DRAFT && status != ReportStatus.REVISION
+                val isCompleted = when (index) {
+                    0 -> status != ReportStatus.DRAFT && status != ReportStatus.REVISION
+                    1 -> approvedByPengawas || currentStep > 1
+                    2 -> approvedByAdmin || currentStep > 2
+                    3 -> approvedByKadis
+                    else -> false
+                }
+                val isActive = currentStep == index &&
+                    status != ReportStatus.APPROVED_FINAL &&
+                    status != ReportStatus.DRAFT &&
+                    status != ReportStatus.REVISION
                 val circleBg = when {
                     isCompleted -> GorontaloTeal600Color()
                     isActive -> MaterialTheme.colorScheme.primary
@@ -485,3 +605,4 @@ fun HierarchicalStepperCard(
 
 @Composable
 private fun GorontaloTeal600Color(): Color = MaterialTheme.colorScheme.secondary
+

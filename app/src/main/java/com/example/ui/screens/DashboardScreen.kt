@@ -56,6 +56,8 @@ import com.example.data.model.ActivityReport
 import com.example.data.model.ReportStatus
 import com.example.data.model.UserProfile
 import com.example.ui.components.ActivityReportCard
+import com.example.ui.components.Base64ImagePreview
+import com.example.ui.components.GorontaloProvinceLogo
 import com.example.ui.components.classificationStyle
 import com.example.ui.viewmodel.UiState
 
@@ -97,7 +99,7 @@ fun DashboardScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(176.dp)
+                        .height(184.dp)
                         .clip(RoundedCornerShape(22.dp))
                 ) {
                     Image(
@@ -124,39 +126,84 @@ fun DashboardScreen(
                             .padding(18.dp),
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = stringResource(id = R.string.instansi_pemda),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.88f)
-                            )
-                            Text(
-                                text = stringResource(id = R.string.instansi_dinas),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            GorontaloProvinceLogo(size = 46.dp)
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = stringResource(id = R.string.instansi_pemda),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.White.copy(alpha = 0.92f)
+                                )
+                                Text(
+                                    text = stringResource(id = R.string.instansi_dinas),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Bottom
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = profile?.fullName?.ifBlank { userDisplayName } ?: userDisplayName.ifBlank { "ASN Diskominfotik" },
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = if (profile != null) {
-                                        "${profile.levelEnum().label} • ${profile.unitBidang}"
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.22f))
+                                        .clickable(onClick = onOpenProfile),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (!profile?.profilePhotoBase64.isNullOrBlank()) {
+                                        Base64ImagePreview(
+                                            base64 = profile!!.profilePhotoBase64,
+                                            contentDescription = "Foto Profil ASN",
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(CircleShape)
+                                        )
                                     } else {
-                                        "Lengkapi Profil NIP & Unit Bidang Anda"
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.9f)
-                                )
+                                        val displayName = profile?.fullName?.ifBlank { userDisplayName }
+                                            ?: userDisplayName.ifBlank { "ASN" }
+                                        val initials = displayName.trim()
+                                            .split(" ")
+                                            .filter { it.isNotBlank() }
+                                            .take(2)
+                                            .joinToString("") { it.take(1).uppercase() }
+                                            .ifBlank { "A" }
+                                        Text(
+                                            text = initials,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = profile?.fullName?.ifBlank { userDisplayName } ?: userDisplayName.ifBlank { "ASN Diskominfotik" },
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = if (profile != null) {
+                                            "${profile.levelEnum().label} • ${profile.unitBidang}"
+                                        } else {
+                                            "Lengkapi Profil NIP & Unit Bidang Anda"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White.copy(alpha = 0.9f)
+                                    )
+                                }
                             }
                             Surface(
                                 color = Color.White.copy(alpha = 0.18f),

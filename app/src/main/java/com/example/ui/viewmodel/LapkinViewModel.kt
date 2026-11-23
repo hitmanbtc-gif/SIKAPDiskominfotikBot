@@ -195,6 +195,7 @@ class LapkinViewModel(
         reviewerName: String,
         approve: Boolean,
         note: String,
+        forwardToNextTier: Boolean = false,
         forceFinalApproveAsAdmin: Boolean = false,
         onSuccess: () -> Unit = {}
     ) {
@@ -205,6 +206,7 @@ class LapkinViewModel(
                 reviewerName = reviewerName,
                 approve = approve,
                 note = note,
+                forwardToNextTier = forwardToNextTier,
                 forceFinalApproveAsAdmin = forceFinalApproveAsAdmin
             )
             _isBusy.value = false
@@ -213,15 +215,17 @@ class LapkinViewModel(
                     _feedbackMessage.value = when {
                         forceFinalApproveAsAdmin && approve ->
                             "Laporan disahkan final oleh Admin / Kepala Dinas."
+                        approve && forwardToNextTier ->
+                            "Laporan telah disahkan & diteruskan ke jenjang pejabat berikutnya."
                         approve ->
-                            "Verifikasi berhasil diteruskan ke tingkat berikutnya."
+                            "Laporan telah resmi disahkan pada jenjang ini."
                         else ->
                             "Laporan dikembalikan untuk revisi pelapor."
                     }
                     onSuccess()
                 },
                 onFailure = { e ->
-                    _feedbackMessage.value = e.localizedMessage ?: "Gagal memproses verifikasi."
+                    _feedbackMessage.value = e.localizedMessage ?: "Gagal memproses pengesahan laporan."
                 }
             )
         }

@@ -37,6 +37,9 @@ import com.example.data.model.ActivityClassification
 import com.example.data.model.ActivityReport
 import com.example.data.model.ReportStatus
 import com.example.ui.components.ActivityReportCard
+import com.example.ui.components.GorontaloProvinceLogo
+import com.example.ui.components.lapkinTextFieldColors
+import com.example.ui.components.lapkinTextFieldTextStyle
 import com.example.ui.viewmodel.UiState
 
 @Composable
@@ -87,16 +90,23 @@ fun ReportListScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = "Daftar Laporan Kegiatan",
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        Text(
-                            text = "${filteredReports.size} dari ${allReports.size} aktivitas harian",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        GorontaloProvinceLogo(size = 38.dp)
+                        Column {
+                            Text(
+                                text = "Daftar Laporan Kegiatan",
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            Text(
+                                text = "${filteredReports.size} dari ${allReports.size} aktivitas harian",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     FilledTonalButton(
                         onClick = { onExportPdf(filteredReports) },
@@ -116,6 +126,8 @@ fun ReportListScreen(
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
+                    colors = lapkinTextFieldColors(),
+                    textStyle = lapkinTextFieldTextStyle(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("report_search_input")

@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Forward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -49,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.model.ActivityReport
@@ -56,8 +58,11 @@ import com.example.data.model.DiskominfotikCatalog
 import com.example.data.model.ReportStatus
 import com.example.ui.components.Base64ImagePreview
 import com.example.ui.components.ClassificationBadge
+import com.example.ui.components.GorontaloProvinceLogo
 import com.example.ui.components.HierarchicalStepperCard
 import com.example.ui.components.StatusBadge
+import com.example.ui.components.lapkinTextFieldColors
+import com.example.ui.components.lapkinTextFieldTextStyle
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,14 +77,22 @@ fun ReportDetailScreen(
     onEdit: (String) -> Unit,
     onDelete: (String) -> Unit,
     onExportPdf: (ActivityReport) -> Unit,
-    onReviewDecision: (ActivityReport, Boolean, String) -> Unit
+    onReviewDecision: (ActivityReport, Boolean, String, Boolean) -> Unit
 ) {
     var reviewNote by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detail Laporan Kegiatan") },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        GorontaloProvinceLogo(size = 28.dp)
+                        Text("Detail Laporan Kegiatan")
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("detail_back_button")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
@@ -117,10 +130,10 @@ fun ReportDetailScreen(
         val isPendingReview = status == ReportStatus.SUBMITTED_PENGAWAS ||
             status == ReportStatus.SUBMITTED_ADMINISTRATOR ||
             status == ReportStatus.SUBMITTED_KADIS
-        val isReviewer = isPendingReview && (
-            normalizedEmail == DiskominfotikCatalog.ADMIN_EMAIL ||
-                report.reviewerEmails.any { it.equals(normalizedEmail, ignoreCase = true) }
-            )
+        val canForwardApprovedTier = report.canPengawasForwardToAdmin() || report.canAdminForwardToKadis()
+        val isAuthorizedReviewer = normalizedEmail == DiskominfotikCatalog.ADMIN_EMAIL ||
+            report.reviewerEmails.any { it.equals(normalizedEmail, ignoreCase = true) }
+        val isReviewer = (isPendingReview || canForwardApprovedTier) && isAuthorizedReviewer
 
         Box(
             modifier = Modifier
@@ -153,7 +166,7 @@ fun ReportDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             ClassificationBadge(classification = report.classificationEnum())
-                            StatusBadge(status = status)
+                            StatusBadge(status = status, overrideLabel = report.approvalStatusLabel())
                         }
                         Text(
                             text = report.summary,
@@ -193,6 +206,12 @@ fun ReportDetailScreen(
                                     text = "Pelapor: ${report.authorName} (${report.authorTierEnum().label})",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "Status Jenjang: ${report.approvalTierDetailLabel()}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
@@ -286,17 +305,38 @@ fun ReportDetailScreen(
                     }
                 }
 
-                // 4-Tier Hierarchical Stepper
+                // Hierarchical Stepper
                 HierarchicalStepperCard(report = report)
 
                 // Reviewer Action Panel (for Pengawas / Administrator / Kepala Dinas)
                 if (isReviewer) {
-                    val approveLabel = when (status) {
-                        ReportStatus.SUBMITTED_PENGAWAS -> "Verifikasi & Teruskan ke Administrator"
-                        ReportStatus.SUBMITTED_ADMINISTRATOR -> "Setujui & Teruskan ke Kepala Dinas"
-                        ReportStatus.SUBMITTED_KADIS -> "Sahkan Laporan (Final Kepala Dinas)"
-                        else -> "Setujui"
+                    val panelTitle = when {
+                        status == ReportStatus.SUBMITTED_PENGAWAS ->
+                            "Pengesahan Pejabat Pengawas / Fungsional"
+                        report.canPengawasForwardToAdmin() ->
+                            "Opsi Teruskan ke Pejabat Administrator (Oleh Pengawas/JF)"
+                        status == ReportStatus.SUBMITTED_ADMINISTRATOR ->
+                            "Pengesahan Pejabat Administrator"
+                        report.canAdminForwardToKadis() ->
+                            "Opsi Teruskan ke Kepala Dinas (Oleh Pejabat Administrator)"
+                        status == ReportStatus.SUBMITTED_KADIS ->
+                            "Pengesahan Akhir Kepala Dinas"
+                        else -> "Tindakan Verifikasi"
                     }
+                    val panelDescription = when {
+                        status == ReportStatus.SUBMITTED_PENGAWAS ->
+                            "Laporan dari PPPK / Pelaksana langsung disahkan oleh Pejabat Pengawas / Fungsional. Anda juga dapat memilih untuk meneruskan laporan ini ke Pejabat Administrator."
+                        report.canPengawasForwardToAdmin() ->
+                            "Laporan ini sudah disahkan oleh Pejabat Pengawas / Fungsional. Jika laporan ini strategis/penting, Anda dapat memilih untuk meneruskannya ke Pejabat Administrator."
+                        status == ReportStatus.SUBMITTED_ADMINISTRATOR ->
+                            "Laporan dari Pejabat Pengawas/Fungsional (atau yang diteruskan) disahkan oleh Pejabat Administrator. Anda juga dapat memilih untuk meneruskan laporan ini ke Kepala Dinas."
+                        report.canAdminForwardToKadis() ->
+                            "Laporan ini sudah disahkan oleh Pejabat Administrator. Jika laporan ini perlu diketahui pimpinan tertinggi, Anda dapat memilih untuk meneruskannya ke Kepala Dinas."
+                        status == ReportStatus.SUBMITTED_KADIS ->
+                            "Laporan pilihan yang diteruskan oleh Pejabat Administrator untuk disahkan oleh Kepala Dinas."
+                        else -> ""
+                    }
+
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp),
@@ -308,51 +348,124 @@ fun ReportDetailScreen(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Text(
-                                text = "Tindakan Verifikasi (${status.tierLabel})",
+                                text = panelTitle,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
                             )
+                            if (panelDescription.isNotBlank()) {
+                                Text(
+                                    text = panelDescription,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                             OutlinedTextField(
                                 value = reviewNote,
                                 onValueChange = { reviewNote = it },
-                                label = { Text("Catatan Verifikasi / Arahan / Revisi") },
-                                placeholder = { Text("Wajib diisi jika mengembalikan untuk revisi...") },
+                                label = { Text("Catatan Pengesahan / Arahan / Revisi") },
+                                placeholder = { Text("Tulis catatan pengesahan atau alasan revisi...") },
                                 minLines = 2,
                                 shape = RoundedCornerShape(12.dp),
+                                colors = lapkinTextFieldColors(),
+                                textStyle = lapkinTextFieldTextStyle(),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("review_note_input")
                             )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                OutlinedButton(
-                                    onClick = { onReviewDecision(report, false, reviewNote) },
-                                    enabled = !isBusy && reviewNote.trim().isNotBlank(),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.error
-                                    ),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .testTag("return_revision_button")
-                                ) {
-                                    Icon(Icons.Filled.Replay, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Revisi")
+
+                            if (isPendingReview) {
+                                val directApproveLabel = when (status) {
+                                    ReportStatus.SUBMITTED_PENGAWAS -> "Sahkan Laporan (Pengawas/JF)"
+                                    ReportStatus.SUBMITTED_ADMINISTRATOR -> "Sahkan Laporan (Administrator)"
+                                    ReportStatus.SUBMITTED_KADIS -> "Sahkan Laporan (Kepala Dinas)"
+                                    else -> "Sahkan Laporan"
                                 }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { onReviewDecision(report, false, reviewNote, false) },
+                                        enabled = !isBusy && reviewNote.trim().isNotBlank(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            contentColor = MaterialTheme.colorScheme.error
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .testTag("return_revision_button")
+                                    ) {
+                                        Icon(Icons.Filled.Replay, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Revisi")
+                                    }
+                                    Button(
+                                        onClick = { onReviewDecision(report, true, reviewNote, false) },
+                                        enabled = !isBusy,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier
+                                            .weight(1.6f)
+                                            .testTag("approve_forward_button")
+                                    ) {
+                                        Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(directApproveLabel)
+                                    }
+                                }
+
+                                if (status == ReportStatus.SUBMITTED_PENGAWAS) {
+                                    FilledTonalButton(
+                                        onClick = { onReviewDecision(report, true, reviewNote, true) },
+                                        enabled = !isBusy,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("approve_and_forward_admin_button")
+                                    ) {
+                                        Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Sahkan & Teruskan ke Pejabat Administrator")
+                                    }
+                                } else if (status == ReportStatus.SUBMITTED_ADMINISTRATOR) {
+                                    FilledTonalButton(
+                                        onClick = { onReviewDecision(report, true, reviewNote, true) },
+                                        enabled = !isBusy,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("approve_and_forward_kadis_button")
+                                    ) {
+                                        Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Sahkan & Teruskan ke Kepala Dinas")
+                                    }
+                                }
+                            } else if (report.canPengawasForwardToAdmin()) {
                                 Button(
-                                    onClick = { onReviewDecision(report, true, reviewNote) },
+                                    onClick = { onReviewDecision(report, true, reviewNote, true) },
                                     enabled = !isBusy,
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier
-                                        .weight(1.5f)
-                                        .testTag("approve_forward_button")
+                                        .fillMaxWidth()
+                                        .testTag("forward_to_administrator_button")
                                 ) {
-                                    Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text(approveLabel)
+                                    Text("Teruskan Laporan Ini ke Pejabat Administrator")
+                                }
+                            } else if (report.canAdminForwardToKadis()) {
+                                Button(
+                                    onClick = { onReviewDecision(report, true, reviewNote, true) },
+                                    enabled = !isBusy,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("forward_to_kadis_button")
+                                ) {
+                                    Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Teruskan Laporan Ini ke Kepala Dinas")
                                 }
                             }
                         }

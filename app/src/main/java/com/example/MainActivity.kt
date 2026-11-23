@@ -391,10 +391,16 @@ private fun AuthenticatedLapkinApp(
                             onSaveOrSubmitReport = { draft, isSubmit, onDone ->
                                 viewModel.saveOrSubmitReport(draft, isSubmit, onDone)
                             },
-                            onReviewDecision = { target, approve, note ->
+                            onReviewDecision = { target, approve, note, forwardToNextTier ->
                                 val reviewerName = profile?.fullName?.ifBlank { currentUserDisplayName }
                                     ?: currentUserDisplayName
-                                viewModel.reviewReport(target, reviewerName, approve, note)
+                                viewModel.reviewReport(
+                                    report = target,
+                                    reviewerName = reviewerName,
+                                    approve = approve,
+                                    note = note,
+                                    forwardToNextTier = forwardToNextTier
+                                )
                             },
                             onExportPdf = { list, label ->
                                 exportReportsToPdf(list, label)
@@ -451,7 +457,19 @@ private fun AuthenticatedLapkinApp(
                     composable(ROUTE_VERIFICATION) {
                         VerificationQueueScreen(
                             queueState = queueState,
-                            onOpenReport = { id -> navController.navigate("$ROUTE_DETAIL/$id") }
+                            isBusy = isBusy,
+                            onOpenReport = { id -> navController.navigate("$ROUTE_DETAIL/$id") },
+                            onQuickReviewDecision = { target, approve, note, forwardToNextTier ->
+                                val reviewerName = profile?.fullName?.ifBlank { currentUserDisplayName }
+                                    ?: currentUserDisplayName
+                                viewModel.reviewReport(
+                                    report = target,
+                                    reviewerName = reviewerName,
+                                    approve = approve,
+                                    note = note,
+                                    forwardToNextTier = forwardToNextTier
+                                )
+                            }
                         )
                     }
 
@@ -559,10 +577,16 @@ private fun AuthenticatedLapkinApp(
                                     "Tanggal ${singleReport.activityDate}"
                                 )
                             },
-                            onReviewDecision = { target, approve, note ->
+                            onReviewDecision = { target, approve, note, forwardToNextTier ->
                                 val reviewerName = profile?.fullName?.ifBlank { currentUserDisplayName }
                                     ?: currentUserDisplayName
-                                viewModel.reviewReport(target, reviewerName, approve, note)
+                                viewModel.reviewReport(
+                                    report = target,
+                                    reviewerName = reviewerName,
+                                    approve = approve,
+                                    note = note,
+                                    forwardToNextTier = forwardToNextTier
+                                )
                             }
                         )
                     }

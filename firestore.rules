@@ -84,7 +84,8 @@ service cloud.firestore {
         (!('myPhone' in data) || (data.myPhone is string && data.myPhone.size() <= 60)) &&
         (!('pengawasPhone' in data) || (data.pengawasPhone is string && data.pengawasPhone.size() <= 60)) &&
         (!('adminPhone' in data) || (data.adminPhone is string && data.adminPhone.size() <= 60)) &&
-        (!('kadisPhone' in data) || (data.kadisPhone is string && data.kadisPhone.size() <= 60));
+        (!('kadisPhone' in data) || (data.kadisPhone is string && data.kadisPhone.size() <= 60)) &&
+        (!('profilePhotoBase64' in data) || (data.profilePhotoBase64 is string && data.profilePhotoBase64.size() <= 350000));
     }
 
     function isValidAdminBotConfig(data) {
@@ -162,7 +163,7 @@ service cloud.firestore {
         incoming().keys().hasOnly([
           'userId', 'fullName', 'nip', 'jabatanLevel', 'jabatanTitle',
           'unitBidang', 'email', 'pengawasEmail', 'adminEmail', 'kadisEmail',
-          'myPhone', 'pengawasPhone', 'adminPhone', 'kadisPhone',
+          'myPhone', 'pengawasPhone', 'adminPhone', 'kadisPhone', 'profilePhotoBase64',
           'createdAt', 'updatedAt'
         ]) &&
         isValidTimestamp(incoming().createdAt) &&
@@ -179,7 +180,7 @@ service cloud.firestore {
         incoming().diff(existing()).affectedKeys().hasOnly([
           'fullName', 'nip', 'jabatanLevel', 'jabatanTitle',
           'unitBidang', 'email', 'pengawasEmail', 'adminEmail', 'kadisEmail',
-          'myPhone', 'pengawasPhone', 'adminPhone', 'kadisPhone',
+          'myPhone', 'pengawasPhone', 'adminPhone', 'kadisPhone', 'profilePhotoBase64',
           'updatedAt'
         ]);
 
@@ -268,7 +269,7 @@ service cloud.firestore {
           // Terminal state protection with bootstrapped admin override
           isBootstrappedAdmin() ||
           (
-            existing().status != 'APPROVED_FINAL' &&
+            !(existing().status == 'APPROVED_FINAL' && existing().currentTier == 'COMPLETED') &&
             (
               // Action 1: Author edits or resubmits while DRAFT or REVISION
               (
@@ -284,11 +285,27 @@ service cloud.firestore {
                   'pengawasEmail', 'adminEmail', 'kadisEmail', 'lastRevisionNote', 'updatedAt'
                 ])
               ) ||
-              // Action 2: Reviewer verifies, escalates, returns for revision, or final-approves
+              // Action 2: Reviewer directly approves, returns for revision, or selectively forwards to next tier
               (
                 isAssignedReviewer(existing()) &&
-                existing().status in ['SUBMITTED_PENGAWAS', 'SUBMITTED_ADMINISTRATOR', 'SUBMITTED_KADIS'] &&
-                incoming().status in ['SUBMITTED_ADMINISTRATOR', 'SUBMITTED_KADIS', 'REVISION', 'APPROVED_FINAL'] &&
+                (
+                  (
+                    existing().status in ['SUBMITTED_PENGAWAS', 'SUBMITTED_ADMINISTRATOR', 'SUBMITTED_KADIS'] &&
+                    incoming().status in ['SUBMITTED_ADMINISTRATOR', 'SUBMITTED_KADIS', 'REVISION', 'APPROVED_FINAL']
+                  ) ||
+                  (
+                    existing().status == 'APPROVED_FINAL' &&
+                    existing().currentTier == 'PENGAWAS_FUNGSIONAL' &&
+                    incoming().status == 'SUBMITTED_ADMINISTRATOR' &&
+                    incoming().currentTier == 'ADMINISTRATOR'
+                  ) ||
+                  (
+                    existing().status == 'APPROVED_FINAL' &&
+                    existing().currentTier == 'ADMINISTRATOR' &&
+                    incoming().status == 'SUBMITTED_KADIS' &&
+                    incoming().currentTier == 'KEPALA_DINAS'
+                  )
+                ) &&
                 incoming().diff(existing()).affectedKeys().hasOnly([
                   'status', 'currentTier',
                   'pengawasReviewerName', 'pengawasNote', 'pengawasReviewedAtMillis',

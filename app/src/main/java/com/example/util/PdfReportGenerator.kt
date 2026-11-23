@@ -2,6 +2,7 @@ package com.example.util
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -13,6 +14,7 @@ import android.os.ParcelFileDescriptor
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import com.example.R
 import com.example.data.model.ActivityClassification
 import com.example.data.model.ActivityReport
 import com.example.data.model.UserProfile
@@ -139,20 +141,19 @@ object PdfReportGenerator {
                 }
             }
 
-            // 1. Official Kop Surat
-            canvas.drawRect(MARGIN_H, y, MARGIN_H + 6f, y + 48f, navyPaint)
-            canvas.drawRect(MARGIN_H + 6f, y, MARGIN_H + 10f, y + 48f, tealPaint)
-            canvas.drawText("PEMERINTAH PROVINSI GORONTALO", MARGIN_H + 18f, y + 12f, kopTitlePaint)
+            // 1. Official Kop Surat with Logo Provinsi Gorontalo
+            drawGorontaloEmblem(context, canvas, MARGIN_H, y, 48f)
+            canvas.drawText("PEMERINTAH PROVINSI GORONTALO", MARGIN_H + 56f, y + 13f, kopTitlePaint)
             canvas.drawText(
                 "DINAS KOMUNIKASI, INFORMATIKA DAN STATISTIK",
-                MARGIN_H + 18f,
-                y + 28f,
+                MARGIN_H + 56f,
+                y + 29f,
                 kopDinasPaint
             )
             canvas.drawText(
                 "Jl. Prof. Dr. H.B. Jassin, Kota Gorontalo • Laporan Pelaksanaan Kegiatan & Aktivitas Harian ASN",
-                MARGIN_H + 18f,
-                y + 42f,
+                MARGIN_H + 56f,
+                y + 43f,
                 kopSubPaint
             )
             y += 54f
@@ -285,7 +286,7 @@ object PdfReportGenerator {
                 innerY += descLayout.height.toFloat() + 6f
 
                 // Status & Verification trail
-                val statusText = "Status Berjenjang: ${item.statusEnum().label} (${item.statusEnum().tierLabel})"
+                val statusText = "Status Pengesahan: ${item.approvalStatusLabel()} (${item.approvalTierDetailLabel()})"
                 canvas.drawText(statusText, MARGIN_H + 8f, y + cardHeight - 10f, boldBodyPaint)
 
                 // Photo thumbnail on the right
@@ -306,7 +307,7 @@ object PdfReportGenerator {
             // 5. Hierarchical 4-Tier Signature Block
             ensureSpace(145f)
             y += 6f
-            canvas.drawText("LEMBAR VERIFIKASI & PENGESAHAN BERJENJANG", MARGIN_H, y + 10f, sectionHeaderPaint)
+            canvas.drawText("LEMBAR PENGESAHAN & PENERUSAN BERJENJANG", MARGIN_H, y + 10f, sectionHeaderPaint)
             y += 18f
 
             val sigW = (CONTENT_WIDTH - 12f) / 2f
@@ -323,20 +324,20 @@ object PdfReportGenerator {
 
             drawSignatureBox(
                 canvas, MARGIN_H, y, sigW, sigH, borderPaint, mutedPaint, boldBodyPaint,
-                "1. Yang Melaporkan (PPPK / Pelaksana)", authorName, "NIP. $authorNip"
+                "1. Yang Melaporkan ($authorJabatan)", authorName, "NIP. $authorNip"
             )
             drawSignatureBox(
                 canvas, MARGIN_H + sigW + 12f, y, sigW, sigH, borderPaint, mutedPaint, boldBodyPaint,
-                "2. Diverifikasi (Pengawas / Fungsional)", latestPengawas, "Tingkat I"
+                "2. Mengesahkan PPPK/Pelaksana (Pengawas/JF)", latestPengawas, "Pengesah & Pemilih Penerusan ke Administrator"
             )
             y += sigH + 8f
             drawSignatureBox(
                 canvas, MARGIN_H, y, sigW, sigH, borderPaint, mutedPaint, boldBodyPaint,
-                "3. Disetujui (Pejabat Administrator)", latestAdmin, "Tingkat II"
+                "3. Mengesahkan Pengawas/JF (Administrator)", latestAdmin, "Pengesah & Pemilih Penerusan ke Kepala Dinas"
             )
             drawSignatureBox(
                 canvas, MARGIN_H + sigW + 12f, y, sigW, sigH, borderPaint, mutedPaint, boldBodyPaint,
-                "4. Mengesahkan (Kepala Dinas)", latestKadis, kadisSubLabel
+                "4. Mengesahkan Laporan Pilihan (Kepala Dinas)", latestKadis, kadisSubLabel
             )
 
             drawFooter(canvas, pageNumber, mutedPaint)
@@ -408,9 +409,37 @@ object PdfReportGenerator {
         canvas.drawText(subLabel.take(36), x + 8f, y + h - 7f, mutedPaint)
     }
 
+    private fun drawGorontaloEmblem(context: Context, canvas: Canvas, x: Float, y: Float, size: Float) {
+        val logoBitmap = try {
+            BitmapFactory.decodeResource(context.resources, R.drawable.ic_logo_gorontalo)
+        } catch (_: Exception) {
+            null
+        }
+        if (logoBitmap != null) {
+            val dstRect = RectF(x, y, x + size, y + size)
+            val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+            canvas.drawBitmap(logoBitmap, null, dstRect, bitmapPaint)
+            logoBitmap.recycle()
+            return
+        }
+        val goldPaint = Paint().apply {
+            color = Color.rgb(212, 160, 23)
+            isAntiAlias = true
+        }
+        val purplePaint = Paint().apply {
+            color = Color.rgb(106, 81, 136)
+            isAntiAlias = true
+        }
+        val shieldOuter = RectF(x + 2f, y + 1f, x + size - 2f, y + size - 3f)
+        canvas.drawRoundRect(shieldOuter, 10f, 10f, purplePaint)
+        val cx = x + size / 2f
+        val cy = y + size * 0.45f
+        canvas.drawCircle(cx, cy, size * 0.16f, goldPaint)
+    }
+
     private fun drawFooter(canvas: Canvas, pageNumber: Int, paint: TextPaint) {
         canvas.drawText(
-            "e-Lapkin Diskominfotik Provinsi Gorontalo • Dokumen Pelaporan Berjenjang Resmi",
+            "SIKAPDiskominfotikBot Provinsi Gorontalo • Dokumen Pelaporan & Pengesahan Berjenjang Resmi",
             MARGIN_H,
             PAGE_HEIGHT - 18f,
             paint

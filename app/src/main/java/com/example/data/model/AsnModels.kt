@@ -14,25 +14,25 @@ enum class JabatanLevel(
     PELAKSANA(
         label = "PPPK / Pelaksana",
         shortLabel = "Pelaksana",
-        description = "Staf Pelaksana / PPPK mengajukan laporan ke Pejabat Pengawas / Fungsional",
+        description = "Jenjang pelaporan hanya sampai ke Pejabat Pengawas / Fungsional untuk disahkan langsung",
         stepIndex = 0
     ),
     PENGAWAS_FUNGSIONAL(
         label = "Pejabat Pengawas / Fungsional",
         shortLabel = "Pengawas/JF",
-        description = "Kasubbag / Ketua Tim / Jabatan Fungsional memverifikasi & meneruskan ke Administrator",
+        description = "Mengesahkan laporan PPPK/Pelaksana, memilih laporan untuk diteruskan ke Administrator, & jenjang pelaporan sampai ke Pejabat Administrator",
         stepIndex = 1
     ),
     ADMINISTRATOR(
         label = "Pejabat Administrator",
         shortLabel = "Administrator",
-        description = "Sekretaris Dinas / Kepala Bidang menelaah & meneruskan ke Kepala Dinas",
+        description = "Mengesahkan laporan Pengawas/Fungsional, memilih laporan untuk diteruskan ke Kepala Dinas, & jenjang pelaporan ke Kepala Dinas",
         stepIndex = 2
     ),
     KEPALA_DINAS(
         label = "Kepala Dinas",
         shortLabel = "Kepala Dinas",
-        description = "Kepala Dinas Kominfo & Statistik Provinsi Gorontalo mengesahkan laporan akhir",
+        description = "Mengesahkan laporan Pejabat Administrator serta laporan pilihan yang diteruskan kepada Kepala Dinas",
         stepIndex = 3
     );
 
@@ -85,18 +85,18 @@ enum class ReportStatus(
         stepIndex = 0
     ),
     SUBMITTED_PENGAWAS(
-        label = "Menunggu Pengawas / JF",
-        tierLabel = "Tingkat 1: Pejabat Pengawas / Fungsional",
+        label = "Menunggu Pengesahan Pengawas/JF",
+        tierLabel = "Jenjang Pengesahan: Pejabat Pengawas / Fungsional",
         stepIndex = 1
     ),
     SUBMITTED_ADMINISTRATOR(
-        label = "Menunggu Administrator",
-        tierLabel = "Tingkat 2: Pejabat Administrator",
+        label = "Menunggu Pengesahan Administrator",
+        tierLabel = "Jenjang Pengesahan: Pejabat Administrator",
         stepIndex = 2
     ),
     SUBMITTED_KADIS(
-        label = "Menunggu Kepala Dinas",
-        tierLabel = "Tingkat 3: Kepala Dinas",
+        label = "Menunggu Pengesahan Kepala Dinas",
+        tierLabel = "Jenjang Pengesahan: Kepala Dinas",
         stepIndex = 3
     ),
     REVISION(
@@ -105,8 +105,8 @@ enum class ReportStatus(
         stepIndex = 0
     ),
     APPROVED_FINAL(
-        label = "Disahkan Kepala Dinas",
-        tierLabel = "Selesai & Terverifikasi Berjenjang",
+        label = "Disahkan",
+        tierLabel = "Telah Disahkan Pejabat Berwenang",
         stepIndex = 4
     );
 
@@ -138,16 +138,25 @@ object DiskominfotikCatalog {
             )
         ),
         BidangUnit(
-            name = "Bidang Pengelolaan Informasi dan Komunikasi Publik (IKP)",
+            name = "Bidang PISKP",
             subKegiatans = listOf(
-                "Pengelolaan Media Komunikasi Publik & Diseminasi Informasi Pemprov Gorontalo",
+                "Pengelolaan Informasi dan Saluran Komunikasi Publik Pemprov Gorontalo",
                 "Layanan Hubungan Media, Peliputan & Konferensi Pers Pimpinan Daerah",
                 "Pengelolaan Layanan Informasi Publik (PPID) & Pengaduan SP4N-LAPOR",
-                "Penguatan Kemitraan Komunitas Informasi Masyarakat (KIM) Provinsi"
+                "Diseminasi Informasi Pemerintahan & Konten Kreatif Media Sosial Resmi"
             )
         ),
         BidangUnit(
-            name = "Bidang Teknologi Informasi dan Komunikasi (TIK) / E-Gov",
+            name = "Bidang SDKI",
+            subKegiatans = listOf(
+                "Pengembangan Sumber Daya Komunikasi dan Informasi Masyarakat",
+                "Penguatan Kemitraan Komunitas Informasi Masyarakat (KIM) Provinsi",
+                "Literasi Digital, Edukasi Publik & Pemberdayaan Ekosistem Komunikasi",
+                "Fasilitasi Kelembagaan Komunikasi dan Kemitraan Media Daerah"
+            )
+        ),
+        BidangUnit(
+            name = "Bidang e-Gov",
             subKegiatans = listOf(
                 "Pengelolaan Infrastruktur Jaringan Intra Pemerintah & Pusat Data Daerah",
                 "Pengembangan, Integrasi & Pemeliharaan Aplikasi Layanan Publik (SPBE)",
@@ -156,19 +165,21 @@ object DiskominfotikCatalog {
             )
         ),
         BidangUnit(
-            name = "Bidang Statistik dan Persandian",
+            name = "Bidang Persandian",
             subKegiatans = listOf(
-                "Pengumpulan, Pengolahan & Diseminasi Data Statistik Sektoral (Satu Data Gorontalo)",
-                "Pembinaan Wali Data Perangkat Daerah & Penyusunan Publikasi Statistik",
                 "Pengelolaan Keamanan Informasi, Persandian & Tim Tanggap Insiden Siber (CSIRT)",
-                "Sertifikasi Elektronik & Pengamanan Komunikasi Pimpinan Daerah"
+                "Sertifikasi Elektronik (TTE BSrE) & Pengamanan Komunikasi Pimpinan Daerah",
+                "Audit Keamanan Aplikasi, Uji Kerentanan & Pemantauan Trafik Siber Daerah",
+                "Pengawasan & Evaluasi Standar Keamanan Informasi Perangkat Daerah"
             )
         ),
         BidangUnit(
-            name = "UPTD / Gorontalo Command Center",
+            name = "Bidang Statistik",
             subKegiatans = listOf(
-                "Operasional Gorontalo Command Center & Pemantauan Layanan Publik Terpadu",
-                "Dukungan Teknis Multimedia & Jaringan Agenda Strategis Pemerintah Provinsi"
+                "Pengumpulan, Pengolahan & Diseminasi Data Statistik Sektoral (Satu Data Gorontalo)",
+                "Pembinaan Wali Data Perangkat Daerah & Penyusunan Publikasi Statistik Daerah",
+                "Verifikasi, Validasi & Standarisasi Metadata Statistik Sektoral Provinsi",
+                "Layanan Portal Satu Data & Analisis Statistik Pembangunan Daerah"
             )
         )
     )
@@ -195,6 +206,7 @@ data class UserProfile(
     val pengawasPhone: String = "",
     val adminPhone: String = "",
     val kadisPhone: String = "",
+    val profilePhotoBase64: String = "",
     val createdAt: Timestamp? = null,
     val updatedAt: Timestamp? = null
 ) {
@@ -269,4 +281,39 @@ data class ActivityReport(
     fun classificationEnum(): ActivityClassification = ActivityClassification.fromRaw(classification)
     fun statusEnum(): ReportStatus = ReportStatus.fromRaw(status)
     fun authorTierEnum(): JabatanLevel = JabatanLevel.fromRaw(authorTier)
+
+    fun canPengawasForwardToAdmin(): Boolean {
+        if (statusEnum() != ReportStatus.APPROVED_FINAL) return false
+        return currentTier == JabatanLevel.PENGAWAS_FUNGSIONAL.name ||
+            (kadisReviewerName.isBlank() && adminReviewerName.isBlank() && pengawasReviewerName.isNotBlank())
+    }
+
+    fun canAdminForwardToKadis(): Boolean {
+        if (statusEnum() != ReportStatus.APPROVED_FINAL) return false
+        return currentTier == JabatanLevel.ADMINISTRATOR.name ||
+            (kadisReviewerName.isBlank() && adminReviewerName.isNotBlank())
+    }
+
+    fun approvalStatusLabel(): String {
+        val st = statusEnum()
+        if (st != ReportStatus.APPROVED_FINAL) return st.label
+        return when {
+            canPengawasForwardToAdmin() -> "Disahkan Pengawas / JF"
+            canAdminForwardToKadis() -> "Disahkan Administrator"
+            else -> "Disahkan Kepala Dinas"
+        }
+    }
+
+    fun approvalTierDetailLabel(): String {
+        val st = statusEnum()
+        if (st != ReportStatus.APPROVED_FINAL) return st.tierLabel
+        return when {
+            canPengawasForwardToAdmin() ->
+                "Disahkan Pejabat Pengawas / Fungsional (Dapat Dipilih untuk Diteruskan ke Administrator)"
+            canAdminForwardToKadis() ->
+                "Disahkan Pejabat Administrator (Dapat Dipilih untuk Diteruskan ke Kepala Dinas)"
+            else ->
+                "Disahkan Final oleh Kepala Dinas"
+        }
+    }
 }

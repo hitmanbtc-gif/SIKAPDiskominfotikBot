@@ -178,6 +178,7 @@ class LapkinRepository(
                     "pengawasPhone" to profile.pengawasPhone.trim().take(60),
                     "adminPhone" to profile.adminPhone.trim().take(60),
                     "kadisPhone" to profile.kadisPhone.trim().take(60),
+                    "profilePhotoBase64" to profile.profilePhotoBase64.take(350_000),
                     "createdAt" to FieldValue.serverTimestamp(),
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
@@ -197,6 +198,7 @@ class LapkinRepository(
                     "pengawasPhone" to profile.pengawasPhone.trim().take(60),
                     "adminPhone" to profile.adminPhone.trim().take(60),
                     "kadisPhone" to profile.kadisPhone.trim().take(60),
+                    "profilePhotoBase64" to profile.profilePhotoBase64.take(350_000),
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
                 docRef.update(updateMap).await()
@@ -440,6 +442,7 @@ class LapkinRepository(
         reviewerName: String,
         approve: Boolean,
         note: String,
+        forwardToNextTier: Boolean = false,
         forceFinalApproveAsAdmin: Boolean = false
     ): Result<Unit> {
         val docPath = "activity_reports/${report.id}"
@@ -447,18 +450,21 @@ class LapkinRepository(
             requireUserId()
             require(report.id.isNotBlank()) { "ID laporan tidak valid." }
             val currentStatus = report.statusEnum()
+            val canSelectiveForward = approve && forwardToNextTier &&
+                (report.canPengawasForwardToAdmin() || report.canAdminForwardToKadis())
             require(
                 forceFinalApproveAsAdmin ||
+                    canSelectiveForward ||
                     currentStatus == ReportStatus.SUBMITTED_PENGAWAS ||
                     currentStatus == ReportStatus.SUBMITTED_ADMINISTRATOR ||
                     currentStatus == ReportStatus.SUBMITTED_KADIS
             ) {
-                "Laporan tidak berada dalam antrean verifikasi aktif."
+                "Laporan tidak berada dalam antrean pengesahan atau penerusan aktif."
             }
 
             val cleanNote = note.trim().take(500)
             val cleanReviewer = reviewerName.trim().ifBlank {
-                auth.currentUser?.displayName ?: "Pejabat Verifikator"
+                auth.currentUser?.displayName ?: "Pejabat Pengesah"
             }.take(100)
             val nowMillis = System.currentTimeMillis()
 
@@ -494,21 +500,65 @@ class LapkinRepository(
                 updateFields["kadisReviewerName"] = cleanReviewer
                 updateFields["kadisNote"] = cleanNote.ifBlank { "Disahkan langsung melalui Panel Admin Bot Telegram" }
                 updateFields["kadisReviewedAtMillis"] = nowMillis
+            } else if (report.canPengawasForwardToAdmin() && forwardToNextTier) {
+                // Selective forwarding of an already Pengawas-approved report to Pejabat Administrator
+                updateFields["status"] = ReportStatus.SUBMITTED_ADMINISTRATOR.name
+                updateFields["currentTier"] = JabatanLevel.ADMINISTRATOR.name
+                updateFields["pengawasReviewerName"] = cleanReviewer
+                updateFields["pengawasNote"] = cleanNote.ifBlank {
+                    "Disahkan Pengawas/Fungsional & Dipilih untuk Diteruskan ke Pejabat Administrator"
+                }
+                updateFields["pengawasReviewedAtMillis"] = nowMillis
+            } else if (report.canAdminForwardToKadis() && forwardToNextTier) {
+                // Selective forwarding of an already Administrator-approved report to Kepala Dinas
+                updateFields["status"] = ReportStatus.SUBMITTED_KADIS.name
+                updateFields["currentTier"] = JabatanLevel.KEPALA_DINAS.name
+                updateFields["adminReviewerName"] = cleanReviewer
+                updateFields["adminNote"] = cleanNote.ifBlank {
+                    "Disahkan Pejabat Administrator & Dipilih untuk Diteruskan ke Kepala Dinas"
+                }
+                updateFields["adminReviewedAtMillis"] = nowMillis
             } else {
                 when (currentStatus) {
                     ReportStatus.SUBMITTED_PENGAWAS -> {
-                        updateFields["status"] = ReportStatus.SUBMITTED_ADMINISTRATOR.name
-                        updateFields["currentTier"] = JabatanLevel.ADMINISTRATOR.name
-                        updateFields["pengawasReviewerName"] = cleanReviewer
-                        updateFields["pengawasNote"] = cleanNote.ifBlank { "Diverifikasi Pejabat Pengawas/Fungsional" }
-                        updateFields["pengawasReviewedAtMillis"] = nowMillis
+                        if (forwardToNextTier) {
+                            updateFields["status"] = ReportStatus.SUBMITTED_ADMINISTRATOR.name
+                            updateFields["currentTier"] = JabatanLevel.ADMINISTRATOR.name
+                            updateFields["pengawasReviewerName"] = cleanReviewer
+                            updateFields["pengawasNote"] = cleanNote.ifBlank {
+                                "Disahkan Pejabat Pengawas/Fungsional & Diteruskan ke Pejabat Administrator"
+                            }
+                            updateFields["pengawasReviewedAtMillis"] = nowMillis
+                        } else {
+                            // Direct approval by Pejabat Pengawas / Fungsional for PPPK / Pelaksana reports
+                            updateFields["status"] = ReportStatus.APPROVED_FINAL.name
+                            updateFields["currentTier"] = JabatanLevel.PENGAWAS_FUNGSIONAL.name
+                            updateFields["pengawasReviewerName"] = cleanReviewer
+                            updateFields["pengawasNote"] = cleanNote.ifBlank {
+                                "Disahkan oleh Pejabat Pengawas / Fungsional"
+                            }
+                            updateFields["pengawasReviewedAtMillis"] = nowMillis
+                        }
                     }
                     ReportStatus.SUBMITTED_ADMINISTRATOR -> {
-                        updateFields["status"] = ReportStatus.SUBMITTED_KADIS.name
-                        updateFields["currentTier"] = JabatanLevel.KEPALA_DINAS.name
-                        updateFields["adminReviewerName"] = cleanReviewer
-                        updateFields["adminNote"] = cleanNote.ifBlank { "Disetujui Pejabat Administrator" }
-                        updateFields["adminReviewedAtMillis"] = nowMillis
+                        if (forwardToNextTier) {
+                            updateFields["status"] = ReportStatus.SUBMITTED_KADIS.name
+                            updateFields["currentTier"] = JabatanLevel.KEPALA_DINAS.name
+                            updateFields["adminReviewerName"] = cleanReviewer
+                            updateFields["adminNote"] = cleanNote.ifBlank {
+                                "Disahkan Pejabat Administrator & Diteruskan ke Kepala Dinas"
+                            }
+                            updateFields["adminReviewedAtMillis"] = nowMillis
+                        } else {
+                            // Direct approval by Pejabat Administrator for Pengawas/Fungsional reports
+                            updateFields["status"] = ReportStatus.APPROVED_FINAL.name
+                            updateFields["currentTier"] = JabatanLevel.ADMINISTRATOR.name
+                            updateFields["adminReviewerName"] = cleanReviewer
+                            updateFields["adminNote"] = cleanNote.ifBlank {
+                                "Disahkan oleh Pejabat Administrator"
+                            }
+                            updateFields["adminReviewedAtMillis"] = nowMillis
+                        }
                     }
                     ReportStatus.SUBMITTED_KADIS -> {
                         updateFields["status"] = ReportStatus.APPROVED_FINAL.name

@@ -62,6 +62,10 @@
           "type": "string",
           "description": "Chat ID atau Username Telegram Kepala Dinas (opsional)"
         },
+        "profilePhotoBase64": {
+          "type": "string",
+          "description": "Foto profil akun ASN terkompresi dalam format Base64 JPEG (opsional)"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",

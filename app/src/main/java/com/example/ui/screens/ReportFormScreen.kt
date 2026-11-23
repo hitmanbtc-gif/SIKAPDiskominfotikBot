@@ -76,6 +76,9 @@ import com.example.data.model.DiskominfotikCatalog
 import com.example.data.model.JabatanLevel
 import com.example.data.model.UserProfile
 import com.example.ui.components.Base64ImagePreview
+import com.example.ui.components.GorontaloProvinceLogo
+import com.example.ui.components.lapkinTextFieldColors
+import com.example.ui.components.lapkinTextFieldTextStyle
 import com.example.ui.theme.GorontaloTeal100
 import com.example.ui.theme.GorontaloTeal700
 import com.example.util.ImageHelper
@@ -272,9 +275,15 @@ fun ReportFormScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        if (existingReport == null) "Catat Kegiatan Harian" else "Ubah Laporan Kegiatan"
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        GorontaloProvinceLogo(size = 28.dp)
+                        Text(
+                            if (existingReport == null) "Catat Kegiatan Harian" else "Ubah Laporan Kegiatan"
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("form_back_button")) {
@@ -322,6 +331,8 @@ fun ReportFormScreen(
                     singleLine = false,
                     maxLines = 3,
                     shape = RoundedCornerShape(14.dp),
+                    colors = lapkinTextFieldColors(),
+                    textStyle = lapkinTextFieldTextStyle(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("form_summary_input")
@@ -335,6 +346,8 @@ fun ReportFormScreen(
                     minLines = 3,
                     maxLines = 6,
                     shape = RoundedCornerShape(14.dp),
+                    colors = lapkinTextFieldColors(),
+                    textStyle = lapkinTextFieldTextStyle(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("form_description_input")
@@ -350,6 +363,8 @@ fun ReportFormScreen(
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Tanggal") },
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         trailingIcon = {
                             IconButton(onClick = {
                                 val cal = Calendar.getInstance()
@@ -374,6 +389,8 @@ fun ReportFormScreen(
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Mulai") },
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         trailingIcon = {
                             IconButton(onClick = {
                                 TimePickerDialog(context, { _, h, min ->
@@ -391,6 +408,8 @@ fun ReportFormScreen(
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Selesai") },
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         trailingIcon = {
                             IconButton(onClick = {
                                 TimePickerDialog(context, { _, h, min ->
@@ -443,6 +462,8 @@ fun ReportFormScreen(
                         label = { Text("Bidang / Sekretariat *") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = bidangDropdownExpanded) },
                         shape = RoundedCornerShape(14.dp),
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         modifier = Modifier
                             .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                             .fillMaxWidth()
@@ -475,6 +496,8 @@ fun ReportFormScreen(
                         label = { Text("Hubungan Sub Kegiatan *") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subDropdownExpanded) },
                         shape = RoundedCornerShape(14.dp),
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         maxLines = 3,
                         modifier = Modifier
                             .menuAnchor(MenuAnchorType.PrimaryEditable)
@@ -514,6 +537,8 @@ fun ReportFormScreen(
                             label = { Text("Lokasi / Tempat Kegiatan *") },
                             placeholder = { Text("Contoh: Ruang Rapat Diskominfotik Prov. Gorontalo") },
                             shape = RoundedCornerShape(12.dp),
+                            colors = lapkinTextFieldColors(),
+                            textStyle = lapkinTextFieldTextStyle(),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("form_location_input")
@@ -694,13 +719,16 @@ fun ReportFormScreen(
                                 label = { Text("Keterangan Foto (Opsional)") },
                                 singleLine = true,
                                 shape = RoundedCornerShape(12.dp),
+                                colors = lapkinTextFieldColors(),
+                                textStyle = lapkinTextFieldTextStyle(),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
                 }
 
-                // 7. Tujuan Verifikator Berjenjang
+                // 7. Tujuan Pengesah Sesuai Jenjang Pelaporan
+                val authorTier = profile?.levelEnum() ?: JabatanLevel.PELAKSANA
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -711,36 +739,63 @@ fun ReportFormScreen(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Rute Verifikasi Berjenjang (Opsional Email Atasan)", style = MaterialTheme.typography.titleSmall)
                         Text(
-                            text = "Isi email Google atasan agar laporan langsung masuk ke kotak verifikasi mereka.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "Jenjang Pengesahan Laporan (${authorTier.shortLabel})",
+                            style = MaterialTheme.typography.titleSmall
                         )
-                        OutlinedTextField(
-                            value = pengawasEmail,
-                            onValueChange = { pengawasEmail = it },
-                            label = { Text("Email Pejabat Pengawas / Fungsional") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = adminEmail,
-                            onValueChange = { adminEmail = it },
-                            label = { Text("Email Pejabat Administrator (Kabid/Sekretaris)") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = kadisEmail,
-                            onValueChange = { kadisEmail = it },
-                            label = { Text("Email Kepala Dinas") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        when (authorTier) {
+                            JabatanLevel.PELAKSANA -> {
+                                Text(
+                                    text = "Jenjang pelaporan PPPK / Pelaksana hanya sampai ke Pejabat Pengawas / Fungsional (yang langsung mengesahkan laporan, dan dapat memilih laporan mana yang diteruskan ke Pejabat Administrator).",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                OutlinedTextField(
+                                    value = pengawasEmail,
+                                    onValueChange = { pengawasEmail = it },
+                                    label = { Text("Email Pejabat Pengawas / Fungsional (Pengesah Langsung)") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = lapkinTextFieldColors(),
+                                    textStyle = lapkinTextFieldTextStyle(),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            JabatanLevel.PENGAWAS_FUNGSIONAL -> {
+                                Text(
+                                    text = "Jenjang pelaporan Pejabat Pengawas / Fungsional hanya sampai ke Pejabat Administrator (yang mengesahkan laporan, dan memilih laporan mana yang diteruskan ke Kepala Dinas).",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                OutlinedTextField(
+                                    value = adminEmail,
+                                    onValueChange = { adminEmail = it },
+                                    label = { Text("Email Pejabat Administrator / Kabid / Sekretaris (Pengesah Langsung)") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = lapkinTextFieldColors(),
+                                    textStyle = lapkinTextFieldTextStyle(),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            JabatanLevel.ADMINISTRATOR, JabatanLevel.KEPALA_DINAS -> {
+                                Text(
+                                    text = "Jenjang pelaporan Pejabat Administrator diteruskan langsung kepada Kepala Dinas sebagai Pejabat Pengesah Akhir.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                OutlinedTextField(
+                                    value = kadisEmail,
+                                    onValueChange = { kadisEmail = it },
+                                    label = { Text("Email Kepala Dinas (Pengesah Akhir)") },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = lapkinTextFieldColors(),
+                                    textStyle = lapkinTextFieldTextStyle(),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
                     }
                 }
 

@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import com.example.R
+import com.example.ui.components.GorontaloProvinceLogo
 
 @Composable
 fun AuthScreen(
@@ -101,7 +102,7 @@ fun AuthScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(210.dp)
+                        .height(216.dp)
                         .clip(RoundedCornerShape(24.dp))
                 ) {
                     Image(
@@ -122,34 +123,40 @@ fun AuthScreen(
                                 )
                             )
                     )
-                    Column(
+                    Row(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.secondary,
-                            shape = RoundedCornerShape(8.dp)
+                        GorontaloProvinceLogo(size = 56.dp)
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondary,
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(id = R.string.instansi_pemda),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSecondary,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
                             Text(
-                                text = stringResource(id = R.string.instansi_pemda),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSecondary,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                text = stringResource(id = R.string.instansi_dinas),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = stringResource(id = R.string.instansi_subtitle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.9f)
                             )
                         }
-                        Text(
-                            text = stringResource(id = R.string.instansi_dinas),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = stringResource(id = R.string.instansi_subtitle),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.9f)
-                        )
                     }
                 }
 
@@ -171,8 +178,8 @@ fun AuthScreen(
                         )
                         FeatureRow(
                             icon = Icons.Filled.AccountTree,
-                            title = "Verifikasi Berjenjang 4 Tingkatan",
-                            subtitle = "PPPK / Pelaksana → Pengawas / Fungsional → Administrator → Kepala Dinas"
+                            title = "Pengesahan Langsung & Penerusan Selektif",
+                            subtitle = "PPPK/Pelaksana disahkan Pengawas/JF (pilih teruskan ke Administrator) • Pengawas/JF disahkan Administrator (pilih teruskan ke Kepala Dinas)"
                         )
                         FeatureRow(
                             icon = Icons.Filled.LocationOn,

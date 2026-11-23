@@ -6,21 +6,26 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.automirrored.filled.Forward
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -33,16 +38,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.model.ActivityReport
 import com.example.data.model.ReportStatus
 import com.example.ui.components.ActivityReportCard
+import com.example.ui.components.GorontaloProvinceLogo
 import com.example.ui.viewmodel.UiState
 
 @Composable
 fun VerificationQueueScreen(
     queueState: UiState<List<ActivityReport>>,
-    onOpenReport: (String) -> Unit
+    isBusy: Boolean = false,
+    onOpenReport: (String) -> Unit,
+    onQuickReviewDecision: (ActivityReport, Boolean, String, Boolean) -> Unit = { _, _, _, _ -> }
 ) {
     var selectedTierFilter by remember { mutableStateOf<ReportStatus?>(null) }
     val allQueue = (queueState as? UiState.Success)?.data.orEmpty()
@@ -59,10 +69,10 @@ fun VerificationQueueScreen(
     }
 
     val tierFilters = listOf(
-        ReportStatus.SUBMITTED_PENGAWAS to "Tingkat 1: Pengawas/JF",
-        ReportStatus.SUBMITTED_ADMINISTRATOR to "Tingkat 2: Administrator",
-        ReportStatus.SUBMITTED_KADIS to "Tingkat 3: Kepala Dinas",
-        ReportStatus.APPROVED_FINAL to "Disahkan Final"
+        ReportStatus.SUBMITTED_PENGAWAS to "Pengesahan Pengawas/JF",
+        ReportStatus.SUBMITTED_ADMINISTRATOR to "Pengesahan Administrator",
+        ReportStatus.SUBMITTED_KADIS to "Pengesahan Kepala Dinas",
+        ReportStatus.APPROVED_FINAL to "Sudah Disahkan (Bisa Diteruskan)"
     )
 
     Box(
@@ -82,20 +92,18 @@ fun VerificationQueueScreen(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.AccountTree,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    GorontaloProvinceLogo(size = 42.dp)
                     Column {
                         Text(
-                            text = "Verifikasi Berjenjang",
-                            style = MaterialTheme.typography.titleLarge
+                            text = "Pengesahan & Penerusan Laporan",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "PPPK/Pelaksana → Pengawas/Fungsional → Administrator → Kepala Dinas",
+                            text = "• PPPK/Pelaksana → Disahkan Pengawas/JF (Pengawas memilih laporan untuk diteruskan ke Administrator)\n" +
+                                "• Pengawas/JF → Disahkan Administrator (Administrator memilih laporan untuk diteruskan ke Kepala Dinas)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -172,11 +180,11 @@ fun VerificationQueueScreen(
                                     modifier = Modifier.size(44.dp)
                                 )
                                 Text(
-                                    text = "Belum Ada Antrean Verifikasi",
+                                    text = "Belum Ada Antrean Pengesahan",
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Text(
-                                    text = "Laporan ASN yang mencantumkan email Anda sebagai Pengawas, Administrator, atau Kepala Dinas akan muncul secara real-time di sini.",
+                                    text = "Laporan ASN yang mencantumkan email Anda sebagai Pejabat Pengawas/Fungsional, Pejabat Administrator, atau Kepala Dinas akan muncul secara real-time di sini.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -188,11 +196,170 @@ fun VerificationQueueScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(pendingOnly, key = { it.id }) { report ->
-                                ActivityReportCard(
-                                    report = report,
-                                    showAuthor = true,
-                                    onClick = { onOpenReport(report.id) }
-                                )
+                                val st = report.statusEnum()
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    ActivityReportCard(
+                                        report = report,
+                                        showAuthor = true,
+                                        onClick = { onOpenReport(report.id) }
+                                    )
+                                    // Quick Pengesahan & Selective Forwarding Action Bar
+                                    when {
+                                        st == ReportStatus.SUBMITTED_PENGAWAS -> {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Button(
+                                                    onClick = {
+                                                        onQuickReviewDecision(
+                                                            report,
+                                                            true,
+                                                            "Disahkan langsung oleh Pejabat Pengawas/Fungsional.",
+                                                            false
+                                                        )
+                                                    },
+                                                    enabled = !isBusy,
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .testTag("quick_approve_pengawas_${report.id}")
+                                                ) {
+                                                    Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("Sahkan (Pengawas/JF)", style = MaterialTheme.typography.labelMedium)
+                                                }
+                                                FilledTonalButton(
+                                                    onClick = {
+                                                        onQuickReviewDecision(
+                                                            report,
+                                                            true,
+                                                            "Disahkan oleh Pejabat Pengawas/Fungsional & diteruskan ke Pejabat Administrator.",
+                                                            true
+                                                        )
+                                                    },
+                                                    enabled = !isBusy,
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    modifier = Modifier
+                                                        .weight(1.1f)
+                                                        .testTag("quick_forward_admin_${report.id}")
+                                                ) {
+                                                    Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("Sahkan & Teruskan ke Admin", style = MaterialTheme.typography.labelMedium)
+                                                }
+                                            }
+                                        }
+                                        report.canPengawasForwardToAdmin() -> {
+                                            FilledTonalButton(
+                                                onClick = {
+                                                    onQuickReviewDecision(
+                                                        report,
+                                                        true,
+                                                        "Diteruskan oleh Pejabat Pengawas/Fungsional ke Pejabat Administrator.",
+                                                        true
+                                                    )
+                                                },
+                                                enabled = !isBusy,
+                                                shape = RoundedCornerShape(10.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .testTag("select_forward_admin_${report.id}")
+                                            ) {
+                                                Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("Pilih & Teruskan Laporan Ini ke Pejabat Administrator")
+                                            }
+                                        }
+                                        st == ReportStatus.SUBMITTED_ADMINISTRATOR -> {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Button(
+                                                    onClick = {
+                                                        onQuickReviewDecision(
+                                                            report,
+                                                            true,
+                                                            "Disahkan langsung oleh Pejabat Administrator.",
+                                                            false
+                                                        )
+                                                    },
+                                                    enabled = !isBusy,
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .testTag("quick_approve_admin_${report.id}")
+                                                ) {
+                                                    Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("Sahkan (Administrator)", style = MaterialTheme.typography.labelMedium)
+                                                }
+                                                FilledTonalButton(
+                                                    onClick = {
+                                                        onQuickReviewDecision(
+                                                            report,
+                                                            true,
+                                                            "Disahkan oleh Pejabat Administrator & diteruskan ke Kepala Dinas.",
+                                                            true
+                                                        )
+                                                    },
+                                                    enabled = !isBusy,
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    modifier = Modifier
+                                                        .weight(1.1f)
+                                                        .testTag("quick_forward_kadis_${report.id}")
+                                                ) {
+                                                    Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("Sahkan & Teruskan ke Kadis", style = MaterialTheme.typography.labelMedium)
+                                                }
+                                            }
+                                        }
+                                        report.canAdminForwardToKadis() -> {
+                                            FilledTonalButton(
+                                                onClick = {
+                                                    onQuickReviewDecision(
+                                                        report,
+                                                        true,
+                                                        "Diteruskan oleh Pejabat Administrator ke Kepala Dinas.",
+                                                        true
+                                                    )
+                                                },
+                                                enabled = !isBusy,
+                                                shape = RoundedCornerShape(10.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .testTag("select_forward_kadis_${report.id}")
+                                            ) {
+                                                Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("Pilih & Teruskan Laporan Ini ke Kepala Dinas")
+                                            }
+                                        }
+                                        st == ReportStatus.SUBMITTED_KADIS -> {
+                                            Button(
+                                                onClick = {
+                                                    onQuickReviewDecision(
+                                                        report,
+                                                        true,
+                                                        "Disahkan oleh Kepala Dinas Kominfo & Statistik Provinsi Gorontalo.",
+                                                        false
+                                                    )
+                                                },
+                                                enabled = !isBusy,
+                                                shape = RoundedCornerShape(10.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .testTag("quick_approve_kadis_${report.id}")
+                                            ) {
+                                                Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("Sahkan Laporan (Kepala Dinas)")
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

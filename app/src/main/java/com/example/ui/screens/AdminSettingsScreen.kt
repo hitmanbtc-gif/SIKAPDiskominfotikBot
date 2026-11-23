@@ -73,6 +73,9 @@ import com.example.data.model.DiskominfotikCatalog
 import com.example.data.model.JabatanLevel
 import com.example.data.model.ReportStatus
 import com.example.data.model.UserProfile
+import com.example.ui.components.GorontaloProvinceLogo
+import com.example.ui.components.lapkinTextFieldColors
+import com.example.ui.components.lapkinTextFieldTextStyle
 import com.example.util.PdfReportGenerator
 import com.example.util.TelegramBotService
 import com.example.util.TelegramDiscoveredChat
@@ -190,20 +193,7 @@ fun AdminSettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.18f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.AdminPanelSettings,
-                                contentDescription = "Panel Admin Bot Telegram",
-                                tint = Color.White,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
+                        GorontaloProvinceLogo(size = 46.dp)
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Panel Admin SIKAPDiskominfotikBot",
@@ -317,6 +307,8 @@ fun AdminSettingsScreen(
                             }
                         },
                         shape = RoundedCornerShape(12.dp),
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("admin_bot_token_input")
@@ -326,9 +318,11 @@ fun AdminSettingsScreen(
                         value = botUsername,
                         onValueChange = { botUsername = it },
                         label = { Text("Username Bot Telegram") },
-                        placeholder = { Text("@LapkinDiskominfotikBot") },
+                        placeholder = { Text("@SIKAPDiskominfotikBot") },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("admin_bot_username_input")
@@ -501,6 +495,8 @@ fun AdminSettingsScreen(
                         placeholder = { Text("Contoh: -1001928374650 atau @lapkin_gorontalo") },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("admin_group_chat_id_input")
@@ -509,30 +505,36 @@ fun AdminSettingsScreen(
                     OutlinedTextField(
                         value = pengawasChatId,
                         onValueChange = { pengawasChatId = it },
-                        label = { Text("Chat ID Default Pejabat Pengawas / Fungsional (Tingkat 1)") },
+                        label = { Text("Chat ID Default Pejabat Pengawas / Fungsional (Pengesah PPPK/Pelaksana)") },
                         placeholder = { Text("Contoh: 112233445 atau @pengawas_kominfo") },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     OutlinedTextField(
                         value = adminChatId,
                         onValueChange = { adminChatId = it },
-                        label = { Text("Chat ID Default Pejabat Administrator / Kabid (Tingkat 2)") },
+                        label = { Text("Chat ID Default Pejabat Administrator / Kabid (Pengesah Pengawas/JF)") },
                         placeholder = { Text("Contoh: 223344556 atau @kabid_tik_gorontalo") },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     OutlinedTextField(
                         value = kadisChatId,
                         onValueChange = { kadisChatId = it },
-                        label = { Text("Chat ID Default Kepala Dinas Kominfo & Statistik (Tingkat 3)") },
+                        label = { Text("Chat ID Default Kepala Dinas Kominfo & Statistik (Pengesah Akhir)") },
                         placeholder = { Text("Contoh: 334455667 atau @kadis_kominfo") },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -621,6 +623,8 @@ fun AdminSettingsScreen(
                         label = { Text("Nama Lengkap & Gelar Kepala Dinas (Cetakan PDF A4)") },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("admin_kadis_name_input")
@@ -632,6 +636,8 @@ fun AdminSettingsScreen(
                         label = { Text("NIP Kepala Dinas (Cetakan PDF A4)") },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("admin_kadis_nip_input")
@@ -699,6 +705,8 @@ fun AdminSettingsScreen(
                         minLines = 2,
                         maxLines = 4,
                         shape = RoundedCornerShape(12.dp),
+                        colors = lapkinTextFieldColors(),
+                        textStyle = lapkinTextFieldTextStyle(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("admin_broadcast_input")
@@ -891,7 +899,7 @@ fun AdminSettingsScreen(
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = rep.statusEnum().label,
+                                            text = rep.approvalStatusLabel(),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = if (rep.statusEnum() == ReportStatus.APPROVED_FINAL) {
                                                 Color(0xFF0D652D)

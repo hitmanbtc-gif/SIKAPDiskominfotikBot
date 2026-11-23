@@ -55,19 +55,19 @@ val AppTypography = Typography(
     ),
     bodyLarge = TextStyle(
         fontFamily = PlusJakartaSansFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 15.sp,
+        fontWeight = FontWeight.Medium,
+        fontSize = 15.5.sp,
         lineHeight = 22.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = PlusJakartaSansFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
+        fontWeight = FontWeight.Medium,
+        fontSize = 14.5.sp,
         lineHeight = 20.sp
     ),
     bodySmall = TextStyle(
         fontFamily = PlusJakartaSansFamily,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 17.sp
     ),

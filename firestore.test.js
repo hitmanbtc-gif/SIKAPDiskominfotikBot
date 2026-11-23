@@ -28,7 +28,7 @@ function validProfilePayload(uid, email, overrides = {}) {
     nip: "199205142022032001",
     jabatanLevel: "PELAKSANA",
     jabatanTitle: "Pranata Komputer Ahli Pertama",
-    unitBidang: "Bidang TIK & E-Government",
+    unitBidang: "Bidang e-Gov",
     email,
     pengawasEmail: BOB_EMAIL,
     adminEmail: ADMIN_EMAIL,
@@ -37,6 +37,7 @@ function validProfilePayload(uid, email, overrides = {}) {
     pengawasPhone: "@kasubbag_tik_gorontalo",
     adminPhone: "-100198273645",
     kadisPhone: "554433221",
+    profilePhotoBase64: "base64_avatar_jpeg_stub",
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -46,7 +47,7 @@ function validProfilePayload(uid, email, overrides = {}) {
 function validAdminConfigPayload(overrides = {}) {
   const now = new Date(Date.now() - 1000);
   return {
-    botUsername: "@LapkinDiskominfotikBot",
+    botUsername: "@SIKAPDiskominfotikBot",
     defaultGroupChatId: "-1001928374650",
     pengawasChatId: "112233445",
     adminChatId: "223344556",
@@ -79,7 +80,7 @@ function validReportPayload(uid, email, overrides = {}) {
     summary: "Pemeliharaan Jaringan Intra Pemerintah Provinsi Gorontalo",
     description: "Melakukan pengecekan router core dan sinkronisasi VPN antar OPD.",
     classification: "RUTIN",
-    unitBidang: "Bidang TIK & E-Government",
+    unitBidang: "Bidang e-Gov",
     subKegiatan: "Pengelolaan Infrastruktur Jaringan Intra Pemerintah & Pusat Data",
     locationName: "Ruang Server Diskominfotik Provinsi Gorontalo",
     gpsLatitude: 0.543544,
@@ -153,6 +154,8 @@ test("User profile isolation: owner can create/update; cross-user read/write den
   await assertSucceeds(
     aliceDb.collection("users").doc(ALICE_UID).update({
       jabatanTitle: "Pranata Komputer Ahli Muda",
+      unitBidang: "Bidang PISKP",
+      profilePhotoBase64: "updated_base64_avatar_jpeg_stub",
       updatedAt: new Date(Date.now() - 500),
     })
   );
@@ -269,13 +272,25 @@ test("Hierarchical review workflow: assigned reviewer can escalate/approve; cann
     })
   );
 
-  // Assigned Pengawas approves & forwards to Administrator
+  // Assigned Pengawas directly approves (disahkan langsung) Pelaksana report
+  await assertSucceeds(
+    bobDb.collection("activity_reports").doc("rep_flow").update({
+      status: "APPROVED_FINAL",
+      currentTier: "PENGAWAS_FUNGSIONAL",
+      pengawasReviewerName: "Bob Pengawas, ST",
+      pengawasNote: "Disahkan langsung oleh Pejabat Pengawas / Fungsional.",
+      pengawasReviewedAtMillis: Date.now() - 550,
+      updatedAt: new Date(Date.now() - 550),
+    })
+  );
+
+  // Assigned Pengawas can then selectively choose to forward the approved report to Pejabat Administrator
   await assertSucceeds(
     bobDb.collection("activity_reports").doc("rep_flow").update({
       status: "SUBMITTED_ADMINISTRATOR",
       currentTier: "ADMINISTRATOR",
       pengawasReviewerName: "Bob Pengawas, ST",
-      pengawasNote: "Diverifikasi sesuai jadwal pemeliharaan.",
+      pengawasNote: "Disahkan Pengawas/JF & dipilih untuk diteruskan ke Pejabat Administrator.",
       pengawasReviewedAtMillis: Date.now() - 500,
       updatedAt: new Date(Date.now() - 500),
     })
@@ -304,7 +319,7 @@ test("Hierarchical review workflow: assigned reviewer can escalate/approve; cann
     })
   );
 
-  // Terminal state APPROVED_FINAL is locked against non-admin reviewer edits
+  // Terminal state APPROVED_FINAL (COMPLETED) is locked against non-admin reviewer edits
   await assertFails(
     bobDb.collection("activity_reports").doc("rep_flow").update({
       status: "REVISION",

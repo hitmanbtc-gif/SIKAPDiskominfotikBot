@@ -84,6 +84,8 @@ import com.example.data.model.JabatanLevel
 import com.example.data.model.ReportStatus
 import com.example.data.model.UserProfile
 import com.example.ui.components.Base64ImagePreview
+import com.example.ui.components.GorontaloProvinceLogo
+import com.example.ui.components.lapkinTextFieldTextStyle
 import com.example.ui.viewmodel.UiState
 import com.example.util.ImageHelper
 import com.example.util.LocationHelper
@@ -140,7 +142,7 @@ fun TelegramBotScreen(
     currentUserDisplayName: String,
     isBusy: Boolean,
     onSaveOrSubmitReport: (ActivityReport, Boolean, (String) -> Unit) -> Unit,
-    onReviewDecision: (ActivityReport, Boolean, String) -> Unit,
+    onReviewDecision: (ActivityReport, Boolean, String, Boolean) -> Unit,
     onExportPdf: (List<ActivityReport>, String) -> Unit,
     onOpenDetail: (String) -> Unit,
     onOpenProfileSetup: () -> Unit,
@@ -157,7 +159,9 @@ fun TelegramBotScreen(
             val st = it.statusEnum()
             st == ReportStatus.SUBMITTED_PENGAWAS ||
                 st == ReportStatus.SUBMITTED_ADMINISTRATOR ||
-                st == ReportStatus.SUBMITTED_KADIS
+                st == ReportStatus.SUBMITTED_KADIS ||
+                it.canPengawasForwardToAdmin() ||
+                it.canAdminForwardToKadis()
         }
     }
 
@@ -367,11 +371,11 @@ fun TelegramBotScreen(
         val authorTier = profile?.levelEnum() ?: JabatanLevel.PELAKSANA
         val (targetRole, targetChat) = when (authorTier) {
             JabatanLevel.PELAKSANA ->
-                "Pejabat Pengawas / Fungsional" to (profile?.pengawasPhone?.ifBlank { adminConfig.pengawasChatId }.orEmpty())
+                "Pejabat Pengawas / Fungsional (Pengesah Langsung • Jenjang PPPK/Pelaksana hanya sampai Pengawas/JF)" to (profile?.pengawasPhone?.ifBlank { adminConfig.pengawasChatId }.orEmpty())
             JabatanLevel.PENGAWAS_FUNGSIONAL ->
-                "Pejabat Administrator" to (profile?.adminPhone?.ifBlank { adminConfig.adminChatId }.orEmpty())
+                "Pejabat Administrator (Pengesah Langsung • Jenjang Pengawas/JF hanya sampai Administrator)" to (profile?.adminPhone?.ifBlank { adminConfig.adminChatId }.orEmpty())
             JabatanLevel.ADMINISTRATOR, JabatanLevel.KEPALA_DINAS ->
-                "Kepala Dinas" to (profile?.kadisPhone?.ifBlank { adminConfig.kadisChatId }.orEmpty())
+                "Kepala Dinas (Pengesah Akhir)" to (profile?.kadisPhone?.ifBlank { adminConfig.kadisChatId }.orEmpty())
         }
         val chatDisplay = targetChat.ifBlank { adminConfig.defaultGroupChatId }.ifBlank { "Pilih Chat di Aplikasi Telegram" }
 
@@ -589,28 +593,56 @@ fun TelegramBotScreen(
                 addUserMessage("✅ /verifikasi")
                 if (pendingQueue.isEmpty()) {
                     addBotMessage(
-                        text = "✅ Antrean Verifikasi Berjenjang Kosong\nTidak ada laporan bawahan yang menunggu persetujuan Anda saat ini.",
+                        text = "✅ Antrean Pengesahan & Penerusan Kosong\nTidak ada laporan yang menunggu pengesahan atau pemilihan penerusan saat ini.",
                         buttons = mainMenuButtons()
                     )
                 } else {
                     addBotMessage(
-                        text = "🗂️ Ditemukan ${pendingQueue.size} Laporan Menunggu Verifikasi Berjenjang:\n" +
-                            "Ketuk Inline Keyboard di bawah untuk menyetujui & meneruskan notifikasi ke Telegram jenjang berikutnya."
+                        text = "🗂️ Ditemukan ${pendingQueue.size} Laporan dalam Antrean Pengesahan & Penerusan:\n" +
+                            "• Laporan PPPK/Pelaksana langsung disahkan oleh Pejabat Pengawas/Fungsional (dan Pengawas/JF dapat memilih laporan mana yang diteruskan ke Pejabat Administrator).\n" +
+                            "• Laporan Pejabat Pengawas/Fungsional langsung disahkan oleh Pejabat Administrator (dan Administrator dapat memilih laporan mana yang diteruskan ke Kepala Dinas)."
                     )
                     pendingQueue.take(5).forEach { item ->
+                        val st = item.statusEnum()
+                        val actionButtons = when {
+                            st == ReportStatus.SUBMITTED_PENGAWAS -> listOf(
+                                TgInlineButton("SAHKAN_TG_${item.id}", "✅ Sahkan Laporan (Pengawas/JF)"),
+                                TgInlineButton("FWD_NEXT_TG_${item.id}", "📤 Sahkan & Teruskan ke Administrator"),
+                                TgInlineButton("REV_${item.id}", "↩️ Kembalikan Revisi"),
+                                TgInlineButton("DTL_${item.id}", "🔍 Lihat Detail")
+                            )
+                            item.canPengawasForwardToAdmin() -> listOf(
+                                TgInlineButton("FWD_NEXT_TG_${item.id}", "📤 Pilih & Teruskan ke Pejabat Administrator"),
+                                TgInlineButton("DTL_${item.id}", "🔍 Lihat Detail")
+                            )
+                            st == ReportStatus.SUBMITTED_ADMINISTRATOR -> listOf(
+                                TgInlineButton("SAHKAN_TG_${item.id}", "✅ Sahkan Laporan (Administrator)"),
+                                TgInlineButton("FWD_NEXT_TG_${item.id}", "📤 Sahkan & Teruskan ke Kepala Dinas"),
+                                TgInlineButton("REV_${item.id}", "↩️ Kembalikan Revisi"),
+                                TgInlineButton("DTL_${item.id}", "🔍 Lihat Detail")
+                            )
+                            item.canAdminForwardToKadis() -> listOf(
+                                TgInlineButton("FWD_NEXT_TG_${item.id}", "📤 Pilih & Teruskan ke Kepala Dinas"),
+                                TgInlineButton("DTL_${item.id}", "🔍 Lihat Detail")
+                            )
+                            st == ReportStatus.SUBMITTED_KADIS -> listOf(
+                                TgInlineButton("SAHKAN_TG_${item.id}", "✅ Sahkan Laporan (Kepala Dinas)"),
+                                TgInlineButton("REV_${item.id}", "↩️ Kembalikan Revisi"),
+                                TgInlineButton("DTL_${item.id}", "🔍 Lihat Detail")
+                            )
+                            else -> listOf(
+                                TgInlineButton("DTL_${item.id}", "🔍 Lihat Detail")
+                            )
+                        }
                         addBotMessage(
                             text = "📌 ${item.authorName} (${item.authorTierEnum().label})\n" +
                                 "• Klasifikasi: ${item.classificationEnum().label}\n" +
                                 "• Sub Kegiatan: ${item.subKegiatan}\n" +
                                 "• Ringkasan: ${item.summary}\n" +
                                 "• Lokasi: ${item.locationName}\n" +
-                                "• Status Saat Ini: ${item.statusEnum().tierLabel}",
+                                "• Status Saat Ini: ${item.approvalStatusLabel()}",
                             reportAttachment = item,
-                            buttons = listOf(
-                                TgInlineButton("ACC_TG_${item.id}", "✅ Setujui & Teruskan ke Telegram"),
-                                TgInlineButton("REV_${item.id}", "↩️ Kembalikan Revisi"),
-                                TgInlineButton("DTL_${item.id}", "🔍 Lihat Detail")
-                            )
+                            buttons = actionButtons
                         )
                     }
                 }
@@ -657,18 +689,25 @@ fun TelegramBotScreen(
                 }
                 return
             }
-            text.startsWith("ACC_TG_") -> {
-                val reportId = text.removePrefix("ACC_TG_")
+            text.startsWith("SAHKAN_TG_") || text.startsWith("ACC_TG_") -> {
+                val reportId = text.removePrefix("SAHKAN_TG_").removePrefix("ACC_TG_")
                 val target = queueReports.firstOrNull { it.id == reportId }
                 if (target != null) {
-                    addUserMessage("✅ Setujui & Teruskan ke Telegram: ${target.summary}")
-                    onReviewDecision(target, true, "Diverifikasi & diteruskan via Bot Telegram $activeBotHandle")
-                    val escalatedStatus = when (target.statusEnum()) {
-                        ReportStatus.SUBMITTED_PENGAWAS -> ReportStatus.SUBMITTED_ADMINISTRATOR.name
-                        ReportStatus.SUBMITTED_ADMINISTRATOR -> ReportStatus.SUBMITTED_KADIS.name
-                        else -> ReportStatus.APPROVED_FINAL.name
+                    val tierName = when (target.statusEnum()) {
+                        ReportStatus.SUBMITTED_PENGAWAS -> "Pejabat Pengawas / Fungsional"
+                        ReportStatus.SUBMITTED_ADMINISTRATOR -> "Pejabat Administrator"
+                        else -> "Kepala Dinas"
                     }
-                    val updatedCopy = target.copy(status = escalatedStatus)
+                    addUserMessage("✅ Sahkan Laporan ($tierName): ${target.summary}")
+                    onReviewDecision(target, true, "Disahkan langsung oleh $tierName via Bot Telegram $activeBotHandle", false)
+                    val updatedCopy = target.copy(
+                        status = ReportStatus.APPROVED_FINAL.name,
+                        currentTier = when (target.statusEnum()) {
+                            ReportStatus.SUBMITTED_PENGAWAS -> "PENGAWAS_FUNGSIONAL"
+                            ReportStatus.SUBMITTED_ADMINISTRATOR -> "ADMINISTRATOR"
+                            else -> "COMPLETED"
+                        }
+                    )
                     scope.launch {
                         val dispatch = TelegramBotService.dispatchReportToTelegram(
                             context = context,
@@ -677,7 +716,34 @@ fun TelegramBotScreen(
                             adminConfig = adminConfig
                         )
                         addBotMessage(
-                            text = "✅ Laporan \"${target.summary}\" diverifikasi!\n✈️ ${dispatch.message}",
+                            text = "✅ Laporan \"${target.summary}\" telah DISAHKAN oleh $tierName!\n✈️ ${dispatch.message}",
+                            buttons = mainMenuButtons()
+                        )
+                    }
+                }
+                return
+            }
+            text.startsWith("FWD_NEXT_TG_") -> {
+                val reportId = text.removePrefix("FWD_NEXT_TG_")
+                val target = queueReports.firstOrNull { it.id == reportId }
+                if (target != null) {
+                    val isToAdmin = target.statusEnum() == ReportStatus.SUBMITTED_PENGAWAS || target.canPengawasForwardToAdmin()
+                    val destLabel = if (isToAdmin) "Pejabat Administrator" else "Kepala Dinas"
+                    addUserMessage("📤 Teruskan Pilihan ke $destLabel: ${target.summary}")
+                    onReviewDecision(target, true, "Disahkan & dipilih untuk diteruskan ke $destLabel via Bot Telegram $activeBotHandle", true)
+                    val updatedCopy = target.copy(
+                        status = if (isToAdmin) ReportStatus.SUBMITTED_ADMINISTRATOR.name else ReportStatus.SUBMITTED_KADIS.name,
+                        currentTier = if (isToAdmin) "ADMINISTRATOR" else "KEPALA_DINAS"
+                    )
+                    scope.launch {
+                        val dispatch = TelegramBotService.dispatchReportToTelegram(
+                            context = context,
+                            report = updatedCopy,
+                            profile = profile,
+                            adminConfig = adminConfig
+                        )
+                        addBotMessage(
+                            text = "📤 Laporan \"${target.summary}\" berhasil dipilih & diteruskan ke $destLabel!\n✈️ ${dispatch.message}",
                             buttons = mainMenuButtons()
                         )
                     }
@@ -689,7 +755,7 @@ fun TelegramBotScreen(
                 val target = queueReports.firstOrNull { it.id == reportId }
                 if (target != null) {
                     addUserMessage("↩️ Kembalikan Revisi: ${target.summary}")
-                    onReviewDecision(target, false, "Mohon lengkapi rincian output dan bukti foto kegiatan.")
+                    onReviewDecision(target, false, "Mohon lengkapi rincian output dan bukti foto kegiatan.", false)
                     addBotMessage(
                         text = "↩️ Laporan \"${target.summary}\" telah dikembalikan kepada pelapor untuk direvisi.",
                         buttons = mainMenuButtons()
@@ -1069,20 +1135,7 @@ fun TelegramBotScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape)
-                                .background(TgAccentBlue),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Telegram Bot Icon",
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+                        GorontaloProvinceLogo(size = 42.dp)
                         Column {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -1408,6 +1461,7 @@ fun TelegramBotScreen(
                     OutlinedTextField(
                         value = inputText,
                         onValueChange = { inputText = it },
+                        textStyle = lapkinTextFieldTextStyle(),
                         placeholder = {
                             Text(
                                 text = when (currentStep) {
@@ -1416,21 +1470,22 @@ fun TelegramBotScreen(
                                     TgBotStep.ASK_LOCATION -> "Ketik nama lokasi kegiatan..."
                                     else -> "Ketik perintah /lapor atau /admin..."
                                 },
-                                color = Color(0xFF475569)
+                                color = Color(0xFF334155),
+                                fontWeight = FontWeight.Medium
                             )
                         },
                         singleLine = true,
                         shape = RoundedCornerShape(24.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFFF1F5F9),
-                            unfocusedContainerColor = Color(0xFFF1F5F9),
-                            focusedTextColor = Color(0xFF0F172A),
-                            unfocusedTextColor = Color(0xFF0F172A),
-                            focusedPlaceholderColor = Color(0xFF475569),
-                            unfocusedPlaceholderColor = Color(0xFF475569),
-                            focusedBorderColor = TgHeaderBlue,
-                            unfocusedBorderColor = Color(0xFFCBD5E1),
-                            cursorColor = TgHeaderBlue
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedTextColor = Color(0xFF090D16),
+                            unfocusedTextColor = Color(0xFF090D16),
+                            focusedPlaceholderColor = Color(0xFF334155),
+                            unfocusedPlaceholderColor = Color(0xFF334155),
+                            focusedBorderColor = TgAccentBlue,
+                            unfocusedBorderColor = TgHeaderBlue,
+                            cursorColor = TgAccentBlue
                         ),
                         modifier = Modifier
                             .weight(1f)
@@ -1577,7 +1632,7 @@ private fun TgMessageBubble(
                                 color = Color(0xFF334155)
                             )
                             Text(
-                                text = "Status: ${rep.statusEnum().label}",
+                                text = "Status: ${rep.approvalStatusLabel()}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = TgAccentBlue,
                                 fontWeight = FontWeight.Bold

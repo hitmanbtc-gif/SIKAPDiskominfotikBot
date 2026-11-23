@@ -27,9 +27,9 @@ val VioletAccent100 = Color(0xFFEDE9FE)
 
 val SlateSurface = Color(0xFFF8FAFC)
 val SlateSurfaceVariant = Color(0xFFE2E8F0)
-val SlateOutline = Color(0xFFCBD5E1)
-val SlateOnSurface = Color(0xFF0F172A)
-val SlateOnSurfaceMuted = Color(0xFF475569)
+val SlateOutline = Color(0xFF475569)
+val SlateOnSurface = Color(0xFF090D16)
+val SlateOnSurfaceMuted = Color(0xFF1E293B)
 
 val DarkSurface = Color(0xFF0B1120)
 val DarkSurfaceContainer = Color(0xFF131C31)
