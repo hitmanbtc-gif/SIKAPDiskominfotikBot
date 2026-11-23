@@ -1,0 +1,408 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Profil ASN Dinas Komunikasi, Informatika dan Statistik Provinsi Gorontalo termasuk NIP, tingkatan jabatan berjenjang, unit bidang/sekretariat, email dan Chat ID / username Telegram atasan verifikator.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID pemilik profil"
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Nama lengkap beserta gelar ASN"
+        },
+        "nip": {
+          "type": "string",
+          "description": "Nomor Induk Pegawai (NIP / NI PPPK)"
+        },
+        "jabatanLevel": {
+          "type": "string",
+          "enum": ["PELAKSANA", "PENGAWAS_FUNGSIONAL", "ADMINISTRATOR", "KEPALA_DINAS"],
+          "description": "Tingkatan jabatan dalam alur pelaporan berjenjang"
+        },
+        "jabatanTitle": {
+          "type": "string",
+          "description": "Nama jabatan struktural atau fungsional"
+        },
+        "unitBidang": {
+          "type": "string",
+          "description": "Bidang atau Sekretariat pada Diskominfotik Provinsi Gorontalo"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email Google ASN"
+        },
+        "pengawasEmail": {
+          "type": "string",
+          "description": "Email Pejabat Pengawas/Fungsional penelaah tingkat 1"
+        },
+        "adminEmail": {
+          "type": "string",
+          "description": "Email Pejabat Administrator penelaah tingkat 2"
+        },
+        "kadisEmail": {
+          "type": "string",
+          "description": "Email Kepala Dinas pengesah akhir"
+        },
+        "myPhone": {
+          "type": "string",
+          "description": "Chat ID atau Username Telegram aktif ASN pelapor (opsional)"
+        },
+        "pengawasPhone": {
+          "type": "string",
+          "description": "Chat ID atau Username Telegram Pejabat Pengawas/Fungsional (opsional)"
+        },
+        "adminPhone": {
+          "type": "string",
+          "description": "Chat ID atau Username Telegram Pejabat Administrator (opsional)"
+        },
+        "kadisPhone": {
+          "type": "string",
+          "description": "Chat ID atau Username Telegram Kepala Dinas (opsional)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp server saat dibuat (FieldValue.serverTimestamp())"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp server saat diperbarui (FieldValue.serverTimestamp())"
+        }
+      },
+      "required": [
+        "userId",
+        "fullName",
+        "nip",
+        "jabatanLevel",
+        "jabatanTitle",
+        "unitBidang",
+        "email",
+        "pengawasEmail",
+        "adminEmail",
+        "kadisEmail",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminBotConfig": {
+      "title": "AdminBotConfig",
+      "description": "Pengaturan Global Admin Bot Telegram Dinas Kominfo dan Statistik Provinsi Gorontalo termasuk username bot, Chat ID grup/atasan default, identitas Kepala Dinas pada PDF, pengumuman broadcast, dan kebijakan wajib GPS/foto.",
+      "type": "object",
+      "properties": {
+        "botUsername": {
+          "type": "string",
+          "description": "Username Bot Telegram resmi (contoh: @LapkinDiskominfotikBot)"
+        },
+        "defaultGroupChatId": {
+          "type": "string",
+          "description": "Chat ID Grup/Channel Monitoring Telegram Dinas"
+        },
+        "pengawasChatId": {
+          "type": "string",
+          "description": "Chat ID Default Pejabat Pengawas / Fungsional"
+        },
+        "adminChatId": {
+          "type": "string",
+          "description": "Chat ID Default Pejabat Administrator"
+        },
+        "kadisChatId": {
+          "type": "string",
+          "description": "Chat ID Default Kepala Dinas"
+        },
+        "kadisFullName": {
+          "type": "string",
+          "description": "Nama lengkap & gelar Kepala Dinas untuk tanda tangan PDF resmi"
+        },
+        "kadisNip": {
+          "type": "string",
+          "description": "NIP Kepala Dinas untuk tanda tangan PDF resmi"
+        },
+        "broadcastAnnouncement": {
+          "type": "string",
+          "description": "Pengumuman resmi Admin / Pimpinan yang ditampilkan di ruang Bot Telegram"
+        },
+        "requireGpsLocation": {
+          "type": "boolean",
+          "description": "Wajibkan koordinat GPS saat pengiriman laporan"
+        },
+        "requirePhotoEvidence": {
+          "type": "boolean",
+          "description": "Wajibkan unggah bukti foto kegiatan saat pengiriman laporan"
+        },
+        "autoSendPdfToTelegram": {
+          "type": "boolean",
+          "description": "Kirim dokumen PDF A4 otomatis ke Telegram saat laporan diajukan"
+        },
+        "autoSendGpsPin": {
+          "type": "boolean",
+          "description": "Kirim pin peta lokasi GPS (sendLocation) otomatis ke Telegram"
+        },
+        "updatedByEmail": {
+          "type": "string",
+          "description": "Email Admin yang terakhir memperbarui konfigurasi"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp server saat diperbarui (FieldValue.serverTimestamp())"
+        }
+      },
+      "required": [
+        "botUsername",
+        "defaultGroupChatId",
+        "pengawasChatId",
+        "adminChatId",
+        "kadisChatId",
+        "kadisFullName",
+        "kadisNip",
+        "broadcastAnnouncement",
+        "requireGpsLocation",
+        "requirePhotoEvidence",
+        "autoSendPdfToTelegram",
+        "autoSendGpsPin",
+        "updatedByEmail",
+        "updatedAt"
+      ]
+    },
+    "ActivityReport": {
+      "title": "ActivityReport",
+      "description": "Laporan Pelaksanaan Kegiatan dan Aktivitas Harian ASN dengan klasifikasi, sub kegiatan, foto bukti terkompresi, koordinat GPS, dan status verifikasi berjenjang.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID ASN pembuat laporan"
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Nama lengkap pembuat laporan"
+        },
+        "authorNip": {
+          "type": "string",
+          "description": "NIP / NI PPPK pembuat laporan"
+        },
+        "authorJabatan": {
+          "type": "string",
+          "description": "Jabatan pembuat laporan"
+        },
+        "authorTier": {
+          "type": "string",
+          "enum": ["PELAKSANA", "PENGAWAS_FUNGSIONAL", "ADMINISTRATOR", "KEPALA_DINAS"],
+          "description": "Tingkatan ASN pembuat laporan"
+        },
+        "authorEmail": {
+          "type": "string",
+          "description": "Email pembuat laporan"
+        },
+        "activityDate": {
+          "type": "string",
+          "description": "Tanggal kegiatan format yyyy-MM-dd"
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Waktu mulai kegiatan format HH:mm"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "Waktu selesai kegiatan format HH:mm"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Ringkasan judul kegiatan harian"
+        },
+        "description": {
+          "type": "string",
+          "description": "Uraian pelaksanaan aktivitas dan output/hasil kerja"
+        },
+        "classification": {
+          "type": "string",
+          "enum": ["RUTIN", "REAKTIF", "ARAHAN_PIMPINAN", "TUGAS_TAMBAHAN"],
+          "description": "Klasifikasi kegiatan ASN"
+        },
+        "unitBidang": {
+          "type": "string",
+          "description": "Bidang atau Sekretariat terkait"
+        },
+        "subKegiatan": {
+          "type": "string",
+          "description": "Hubungan dengan sub kegiatan pada Bidang/Sekretariat"
+        },
+        "locationName": {
+          "type": "string",
+          "description": "Lokasi atau tempat pelaksanaan kegiatan"
+        },
+        "gpsLatitude": {
+          "type": "number",
+          "description": "Koordinat lintang GPS"
+        },
+        "gpsLongitude": {
+          "type": "number",
+          "description": "Koordinat bujur GPS"
+        },
+        "gpsAccuracyMeters": {
+          "type": "number",
+          "description": "Akurasi GPS dalam meter"
+        },
+        "gpsAddress": {
+          "type": "string",
+          "description": "Alamat hasil reverse geocoding GPS"
+        },
+        "gpsCaptured": {
+          "type": "boolean",
+          "description": "Penanda koordinat GPS berhasil ditangkap"
+        },
+        "photoBase64": {
+          "type": "string",
+          "description": "Thumbnail bukti foto kegiatan terkompresi dalam Base64 JPEG"
+        },
+        "photoCaption": {
+          "type": "string",
+          "description": "Keterangan foto bukti kegiatan"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "DRAFT",
+            "SUBMITTED_PENGAWAS",
+            "SUBMITTED_ADMINISTRATOR",
+            "SUBMITTED_KADIS",
+            "REVISION",
+            "APPROVED_FINAL"
+          ],
+          "description": "Status pelaporan berjenjang"
+        },
+        "currentTier": {
+          "type": "string",
+          "enum": ["PELAKSANA", "PENGAWAS_FUNGSIONAL", "ADMINISTRATOR", "KEPALA_DINAS", "COMPLETED"],
+          "description": "Tingkatan aktif yang menangani laporan saat ini"
+        },
+        "reviewerEmails": {
+          "type": "array",
+          "description": "Daftar email verifikator berjenjang (maksimal 5)"
+        },
+        "pengawasEmail": {
+          "type": "string",
+          "description": "Email Pejabat Pengawas/Fungsional"
+        },
+        "adminEmail": {
+          "type": "string",
+          "description": "Email Pejabat Administrator"
+        },
+        "kadisEmail": {
+          "type": "string",
+          "description": "Email Kepala Dinas"
+        },
+        "pengawasReviewerName": {
+          "type": "string",
+          "description": "Nama Pejabat Pengawas/Fungsional yang memverifikasi"
+        },
+        "pengawasNote": {
+          "type": "string",
+          "description": "Catatan verifikasi Pejabat Pengawas/Fungsional"
+        },
+        "pengawasReviewedAtMillis": {
+          "type": "integer",
+          "description": "Waktu verifikasi Pengawas (epoch millis)"
+        },
+        "adminReviewerName": {
+          "type": "string",
+          "description": "Nama Pejabat Administrator yang memverifikasi"
+        },
+        "adminNote": {
+          "type": "string",
+          "description": "Catatan verifikasi Pejabat Administrator"
+        },
+        "adminReviewedAtMillis": {
+          "type": "integer",
+          "description": "Waktu verifikasi Administrator (epoch millis)"
+        },
+        "kadisReviewerName": {
+          "type": "string",
+          "description": "Nama Kepala Dinas yang mengesahkan"
+        },
+        "kadisNote": {
+          "type": "string",
+          "description": "Catatan pengesahan Kepala Dinas"
+        },
+        "kadisReviewedAtMillis": {
+          "type": "integer",
+          "description": "Waktu pengesahan Kepala Dinas (epoch millis)"
+        },
+        "lastRevisionNote": {
+          "type": "string",
+          "description": "Catatan perbaikan terakhir bila dikembalikan"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp server saat dibuat (FieldValue.serverTimestamp())"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp server saat diperbarui (FieldValue.serverTimestamp())"
+        }
+      },
+      "required": [
+        "userId",
+        "authorName",
+        "authorNip",
+        "authorJabatan",
+        "authorTier",
+        "authorEmail",
+        "activityDate",
+        "startTime",
+        "endTime",
+        "summary",
+        "description",
+        "classification",
+        "unitBidang",
+        "subKegiatan",
+        "locationName",
+        "gpsLatitude",
+        "gpsLongitude",
+        "gpsAccuracyMeters",
+        "gpsAddress",
+        "gpsCaptured",
+        "photoBase64",
+        "photoCaption",
+        "status",
+        "currentTier",
+        "reviewerEmails",
+        "pengawasEmail",
+        "adminEmail",
+        "kadisEmail",
+        "pengawasReviewerName",
+        "pengawasNote",
+        "pengawasReviewedAtMillis",
+        "adminReviewerName",
+        "adminNote",
+        "adminReviewedAtMillis",
+        "kadisReviewerName",
+        "kadisNote",
+        "kadisReviewedAtMillis",
+        "lastRevisionNote",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Profil pegawai ASN per pengguna terautentikasi"
+    },
+    "/admin_config/{configId}": {
+      "schema": { "$ref": "#/entities/AdminBotConfig" },
+      "description": "Konfigurasi global Admin Bot Telegram Diskominfotik Provinsi Gorontalo"
+    },
+    "/activity_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/ActivityReport" },
+      "description": "Koleksi laporan pelaksanaan kegiatan harian ASN Diskominfotik Prov. Gorontalo"
+    }
+  }
+}

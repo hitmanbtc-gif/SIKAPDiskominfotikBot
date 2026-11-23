@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">SIKAPDiskominfotikBot</string>
+    <string name="instansi_pemda">PEMERINTAH PROVINSI GORONTALO</string>
+    <string name="instansi_dinas">DINAS KOMUNIKASI, INFORMATIKA DAN STATISTIK</string>
+    <string name="instansi_subtitle">SIKAPDiskominfotikBot • Bot Telegram Laporan Kegiatan Harian ASN</string>
+    <string name="nav_bot_tg">Bot TG</string>
+    <string name="nav_beranda">Rekap</string>
+    <string name="nav_laporan">Laporan</string>
+    <string name="nav_verifikasi">Verifikasi</string>
+    <string name="nav_admin">Admin</string>
+    <string name="nav_profil">Profil</string>
+    <string name="action_sign_in_google">Masuk ke SIKAPDiskominfotikBot (Google)</string>
+    <string name="action_add_activity">Catat Kegiatan</string>
+    <string name="action_export_pdf">Ekspor PDF</string>
+    <string name="action_capture_gps">Ambil Lokasi GPS</string>
+    <string name="action_pick_photo">Pilih Foto Galeri</string>
+    <string name="action_take_photo">Ambil Foto Kamera</string>
+    <string name="cd_banner_kominfo">Ilustrasi gedung dan jaringan digital Dinas Kominfo dan Statistik Provinsi Gorontalo</string>
+    <string name="cd_empty_reports">Ilustrasi daftar laporan kegiatan harian kosong</string>
+    <string name="cd_activity_photo">Foto bukti pelaksanaan kegiatan harian</string>
+</resources>

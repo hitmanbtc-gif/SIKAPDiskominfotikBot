@@ -1,0 +1,6 @@
+{
+  "name": "SIKAPDiskominfotikBot",
+  "description": "SIKAPDiskominfotikBot — Aplikasi Bot Telegram & Panel Admin Laporan Pelaksanaan Kegiatan dan Aktivitas Harian ASN Dinas Kominfo dan Statistik Provinsi Gorontalo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

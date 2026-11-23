@@ -1,0 +1,310 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default deny everything
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email_verified == true &&
+        request.auth.token.email == 'hitmanbtc@gmail.com';
+    }
+
+    function isAdminOrKadis() {
+      return isBootstrappedAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jabatanLevel in ['ADMINISTRATOR', 'KEPALA_DINAS']
+      );
+    }
+
+    function isAssignedReviewer(data) {
+      return isSignedIn() &&
+        request.auth.token.email_verified == true &&
+        (request.auth.token.email in data.reviewerEmails);
+    }
+
+    function isValidJabatanLevel(level) {
+      return level in ['PELAKSANA', 'PENGAWAS_FUNGSIONAL', 'ADMINISTRATOR', 'KEPALA_DINAS'];
+    }
+
+    function isValidClassification(classification) {
+      return classification in ['RUTIN', 'REAKTIF', 'ARAHAN_PIMPINAN', 'TUGAS_TAMBAHAN'];
+    }
+
+    function isValidReportStatus(status) {
+      return status in [
+        'DRAFT',
+        'SUBMITTED_PENGAWAS',
+        'SUBMITTED_ADMINISTRATOR',
+        'SUBMITTED_KADIS',
+        'REVISION',
+        'APPROVED_FINAL'
+      ];
+    }
+
+    function isValidTier(tier) {
+      return tier in ['PELAKSANA', 'PENGAWAS_FUNGSIONAL', 'ADMINISTRATOR', 'KEPALA_DINAS', 'COMPLETED'];
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+        data.nip is string && data.nip.size() <= 30 &&
+        isValidJabatanLevel(data.jabatanLevel) &&
+        data.jabatanTitle is string && data.jabatanTitle.size() <= 100 &&
+        data.unitBidang is string && data.unitBidang.size() >= 2 && data.unitBidang.size() <= 120 &&
+        data.email is string && data.email.size() <= 120 &&
+        data.pengawasEmail is string && data.pengawasEmail.size() <= 120 &&
+        data.adminEmail is string && data.adminEmail.size() <= 120 &&
+        data.kadisEmail is string && data.kadisEmail.size() <= 120 &&
+        (!('myPhone' in data) || (data.myPhone is string && data.myPhone.size() <= 60)) &&
+        (!('pengawasPhone' in data) || (data.pengawasPhone is string && data.pengawasPhone.size() <= 60)) &&
+        (!('adminPhone' in data) || (data.adminPhone is string && data.adminPhone.size() <= 60)) &&
+        (!('kadisPhone' in data) || (data.kadisPhone is string && data.kadisPhone.size() <= 60));
+    }
+
+    function isValidAdminBotConfig(data) {
+      return data.botUsername is string && data.botUsername.size() <= 100 &&
+        data.defaultGroupChatId is string && data.defaultGroupChatId.size() <= 60 &&
+        data.pengawasChatId is string && data.pengawasChatId.size() <= 60 &&
+        data.adminChatId is string && data.adminChatId.size() <= 60 &&
+        data.kadisChatId is string && data.kadisChatId.size() <= 60 &&
+        data.kadisFullName is string && data.kadisFullName.size() >= 2 && data.kadisFullName.size() <= 100 &&
+        data.kadisNip is string && data.kadisNip.size() <= 30 &&
+        data.broadcastAnnouncement is string && data.broadcastAnnouncement.size() <= 500 &&
+        data.requireGpsLocation is bool &&
+        data.requirePhotoEvidence is bool &&
+        data.autoSendPdfToTelegram is bool &&
+        data.autoSendGpsPin is bool &&
+        data.updatedByEmail is string && data.updatedByEmail.size() <= 120;
+    }
+
+    function isValidActivityReport(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+        data.authorName is string && data.authorName.size() >= 2 && data.authorName.size() <= 100 &&
+        data.authorNip is string && data.authorNip.size() <= 30 &&
+        data.authorJabatan is string && data.authorJabatan.size() <= 100 &&
+        isValidJabatanLevel(data.authorTier) &&
+        data.authorEmail is string && data.authorEmail.size() <= 120 &&
+        data.activityDate is string && data.activityDate.size() >= 8 && data.activityDate.size() <= 20 &&
+        data.startTime is string && data.startTime.size() >= 4 && data.startTime.size() <= 10 &&
+        data.endTime is string && data.endTime.size() >= 4 && data.endTime.size() <= 10 &&
+        data.summary is string && data.summary.size() >= 3 && data.summary.size() <= 300 &&
+        data.description is string && data.description.size() <= 2000 &&
+        isValidClassification(data.classification) &&
+        data.unitBidang is string && data.unitBidang.size() >= 2 && data.unitBidang.size() <= 120 &&
+        data.subKegiatan is string && data.subKegiatan.size() >= 2 && data.subKegiatan.size() <= 250 &&
+        data.locationName is string && data.locationName.size() >= 2 && data.locationName.size() <= 200 &&
+        data.gpsLatitude is number && data.gpsLatitude >= -90.0 && data.gpsLatitude <= 90.0 &&
+        data.gpsLongitude is number && data.gpsLongitude >= -180.0 && data.gpsLongitude <= 180.0 &&
+        data.gpsAccuracyMeters is number && data.gpsAccuracyMeters >= 0.0 && data.gpsAccuracyMeters <= 100000.0 &&
+        data.gpsAddress is string && data.gpsAddress.size() <= 250 &&
+        data.gpsCaptured is bool &&
+        data.photoBase64 is string && data.photoBase64.size() <= 350000 &&
+        data.photoCaption is string && data.photoCaption.size() <= 200 &&
+        isValidReportStatus(data.status) &&
+        isValidTier(data.currentTier) &&
+        data.reviewerEmails is list && data.reviewerEmails.size() <= 5 &&
+        (data.reviewerEmails.size() == 0 || data.reviewerEmails[0] is string) &&
+        data.pengawasEmail is string && data.pengawasEmail.size() <= 120 &&
+        data.adminEmail is string && data.adminEmail.size() <= 120 &&
+        data.kadisEmail is string && data.kadisEmail.size() <= 120 &&
+        data.pengawasReviewerName is string && data.pengawasReviewerName.size() <= 100 &&
+        data.pengawasNote is string && data.pengawasNote.size() <= 500 &&
+        data.pengawasReviewedAtMillis is int && data.pengawasReviewedAtMillis >= 0 &&
+        data.adminReviewerName is string && data.adminReviewerName.size() <= 100 &&
+        data.adminNote is string && data.adminNote.size() <= 500 &&
+        data.adminReviewedAtMillis is int && data.adminReviewedAtMillis >= 0 &&
+        data.kadisReviewerName is string && data.kadisReviewerName.size() <= 100 &&
+        data.kadisNote is string && data.kadisNote.size() <= 500 &&
+        data.kadisReviewedAtMillis is int && data.kadisReviewedAtMillis >= 0 &&
+        data.lastRevisionNote is string && data.lastRevisionNote.size() <= 500;
+    }
+
+    // User profile PII isolation: strictly owner-only read/write
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+        isValidId(userId) &&
+        request.auth.uid == userId &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasAll([
+          'userId', 'fullName', 'nip', 'jabatanLevel', 'jabatanTitle',
+          'unitBidang', 'email', 'pengawasEmail', 'adminEmail', 'kadisEmail',
+          'createdAt', 'updatedAt'
+        ]) &&
+        incoming().keys().hasOnly([
+          'userId', 'fullName', 'nip', 'jabatanLevel', 'jabatanTitle',
+          'unitBidang', 'email', 'pengawasEmail', 'adminEmail', 'kadisEmail',
+          'myPhone', 'pengawasPhone', 'adminPhone', 'kadisPhone',
+          'createdAt', 'updatedAt'
+        ]) &&
+        isValidTimestamp(incoming().createdAt) &&
+        isValidTimestamp(incoming().updatedAt) &&
+        isValidUserProfile(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(userId) &&
+        request.auth.uid == userId &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        isValidTimestamp(incoming().updatedAt) &&
+        isValidUserProfile(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'fullName', 'nip', 'jabatanLevel', 'jabatanTitle',
+          'unitBidang', 'email', 'pengawasEmail', 'adminEmail', 'kadisEmail',
+          'myPhone', 'pengawasPhone', 'adminPhone', 'kadisPhone',
+          'updatedAt'
+        ]);
+
+      allow delete: if false;
+    }
+
+    // Global Telegram Bot Admin Configuration: readable by signed-in ASN, writable by Admin/Kadis
+    match /admin_config/{configId} {
+      allow get, list: if isSignedIn() && isValidId(configId);
+
+      allow create, update: if isSignedIn() &&
+        isValidId(configId) &&
+        configId == 'global' &&
+        isAdminOrKadis() &&
+        incoming().keys().hasAll([
+          'botUsername', 'defaultGroupChatId', 'pengawasChatId', 'adminChatId', 'kadisChatId',
+          'kadisFullName', 'kadisNip', 'broadcastAnnouncement',
+          'requireGpsLocation', 'requirePhotoEvidence', 'autoSendPdfToTelegram', 'autoSendGpsPin',
+          'updatedByEmail', 'updatedAt'
+        ]) &&
+        incoming().keys().hasOnly([
+          'botUsername', 'defaultGroupChatId', 'pengawasChatId', 'adminChatId', 'kadisChatId',
+          'kadisFullName', 'kadisNip', 'broadcastAnnouncement',
+          'requireGpsLocation', 'requirePhotoEvidence', 'autoSendPdfToTelegram', 'autoSendGpsPin',
+          'updatedByEmail', 'updatedAt'
+        ]) &&
+        isValidTimestamp(incoming().updatedAt) &&
+        isValidAdminBotConfig(incoming());
+
+      allow delete: if false;
+    }
+
+    // Daily ASN Activity Reports with hierarchical approval workflow
+    match /activity_reports/{reportId} {
+      allow get: if isSignedIn() && isValidId(reportId) && (
+        existing().userId == request.auth.uid ||
+        isAssignedReviewer(existing()) ||
+        isBootstrappedAdmin()
+      );
+
+      allow list: if isSignedIn() && (
+        existing().userId == request.auth.uid ||
+        isAssignedReviewer(existing()) ||
+        isBootstrappedAdmin()
+      );
+
+      allow create: if isSignedIn() &&
+        isValidId(reportId) &&
+        incoming().userId == request.auth.uid &&
+        incoming().status in ['DRAFT', 'SUBMITTED_PENGAWAS', 'SUBMITTED_ADMINISTRATOR', 'SUBMITTED_KADIS'] &&
+        incoming().keys().hasAll([
+          'userId', 'authorName', 'authorNip', 'authorJabatan', 'authorTier', 'authorEmail',
+          'activityDate', 'startTime', 'endTime', 'summary', 'description', 'classification',
+          'unitBidang', 'subKegiatan', 'locationName',
+          'gpsLatitude', 'gpsLongitude', 'gpsAccuracyMeters', 'gpsAddress', 'gpsCaptured',
+          'photoBase64', 'photoCaption', 'status', 'currentTier', 'reviewerEmails',
+          'pengawasEmail', 'adminEmail', 'kadisEmail',
+          'pengawasReviewerName', 'pengawasNote', 'pengawasReviewedAtMillis',
+          'adminReviewerName', 'adminNote', 'adminReviewedAtMillis',
+          'kadisReviewerName', 'kadisNote', 'kadisReviewedAtMillis',
+          'lastRevisionNote', 'createdAt', 'updatedAt'
+        ]) &&
+        incoming().keys().hasOnly([
+          'userId', 'authorName', 'authorNip', 'authorJabatan', 'authorTier', 'authorEmail',
+          'activityDate', 'startTime', 'endTime', 'summary', 'description', 'classification',
+          'unitBidang', 'subKegiatan', 'locationName',
+          'gpsLatitude', 'gpsLongitude', 'gpsAccuracyMeters', 'gpsAddress', 'gpsCaptured',
+          'photoBase64', 'photoCaption', 'status', 'currentTier', 'reviewerEmails',
+          'pengawasEmail', 'adminEmail', 'kadisEmail',
+          'pengawasReviewerName', 'pengawasNote', 'pengawasReviewedAtMillis',
+          'adminReviewerName', 'adminNote', 'adminReviewedAtMillis',
+          'kadisReviewerName', 'kadisNote', 'kadisReviewedAtMillis',
+          'lastRevisionNote', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidTimestamp(incoming().createdAt) &&
+        isValidTimestamp(incoming().updatedAt) &&
+        isValidActivityReport(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidId(reportId) &&
+        isValidActivityReport(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        isValidTimestamp(incoming().updatedAt) &&
+        (
+          // Terminal state protection with bootstrapped admin override
+          isBootstrappedAdmin() ||
+          (
+            existing().status != 'APPROVED_FINAL' &&
+            (
+              // Action 1: Author edits or resubmits while DRAFT or REVISION
+              (
+                existing().userId == request.auth.uid &&
+                existing().status in ['DRAFT', 'REVISION'] &&
+                incoming().status in ['DRAFT', 'SUBMITTED_PENGAWAS', 'SUBMITTED_ADMINISTRATOR', 'SUBMITTED_KADIS'] &&
+                incoming().diff(existing()).affectedKeys().hasOnly([
+                  'authorName', 'authorNip', 'authorJabatan', 'authorTier', 'authorEmail',
+                  'activityDate', 'startTime', 'endTime', 'summary', 'description', 'classification',
+                  'unitBidang', 'subKegiatan', 'locationName',
+                  'gpsLatitude', 'gpsLongitude', 'gpsAccuracyMeters', 'gpsAddress', 'gpsCaptured',
+                  'photoBase64', 'photoCaption', 'status', 'currentTier', 'reviewerEmails',
+                  'pengawasEmail', 'adminEmail', 'kadisEmail', 'lastRevisionNote', 'updatedAt'
+                ])
+              ) ||
+              // Action 2: Reviewer verifies, escalates, returns for revision, or final-approves
+              (
+                isAssignedReviewer(existing()) &&
+                existing().status in ['SUBMITTED_PENGAWAS', 'SUBMITTED_ADMINISTRATOR', 'SUBMITTED_KADIS'] &&
+                incoming().status in ['SUBMITTED_ADMINISTRATOR', 'SUBMITTED_KADIS', 'REVISION', 'APPROVED_FINAL'] &&
+                incoming().diff(existing()).affectedKeys().hasOnly([
+                  'status', 'currentTier',
+                  'pengawasReviewerName', 'pengawasNote', 'pengawasReviewedAtMillis',
+                  'adminReviewerName', 'adminNote', 'adminReviewedAtMillis',
+                  'kadisReviewerName', 'kadisNote', 'kadisReviewedAtMillis',
+                  'lastRevisionNote', 'updatedAt'
+                ])
+              )
+            )
+          )
+        );
+
+      allow delete: if isSignedIn() &&
+        isValidId(reportId) &&
+        existing().userId == request.auth.uid &&
+        existing().status in ['DRAFT', 'REVISION'];
+    }
+  }
+}
